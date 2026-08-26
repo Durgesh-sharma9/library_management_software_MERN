@@ -1,0 +1,6 @@
+{
+  "name": "School Library Management Software",
+  "description": "A modern, production-ready MERN stack school library management software for books, members, assignments, fines, and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
