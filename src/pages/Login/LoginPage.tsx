@@ -37,11 +37,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const { login, loginWithGoogle, registerSchool, verifyOTP } = useAuth();
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(initialMode);
 
-  // OTP Verification state
+  // OTP & Google Verification state
   const [showOTPVerification, setShowOTPVerification] = useState<boolean>(false);
   const [otpCode, setOtpCode] = useState<string>('');
   const [pendingEmail, setPendingEmail] = useState<string>('');
   const [resendingOTP, setResendingOTP] = useState<boolean>(false);
+  const [isGoogleVerified, setIsGoogleVerified] = useState<boolean>(false);
 
   // Login form state
   const [email, setEmail] = useState('');
@@ -77,13 +78,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       script.async = true;
       script.defer = true;
       script.onload = () => {
-        initGoogleGIS();
+        setTimeout(initGoogleGIS, 100);
       };
       document.body.appendChild(script);
     } else {
-      initGoogleGIS();
+      setTimeout(initGoogleGIS, 100);
     }
   }, []);
+
+  useEffect(() => {
+    setTimeout(initGoogleGIS, 150);
+  }, [activeMode]);
 
   const initGoogleGIS = () => {
     if (window.google && window.google.accounts) {
@@ -103,6 +108,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           text: 'signin_with',
         });
       }
+
+      const signupContainer = document.getElementById('google-signup-btn-container');
+      if (signupContainer) {
+        window.google.accounts.id.renderButton(signupContainer, {
+          theme: 'filled_blue',
+          size: 'medium',
+          width: 320,
+          shape: 'pill',
+          text: 'signup_with',
+        });
+      }
     }
   };
 
@@ -111,6 +127,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     try {
       setError('');
       setSuccessMessage('');
+
+      // Decode Google JWT payload safely
+      try {
+        const base64Url = response.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const googleUser = JSON.parse(jsonPayload);
+
+        if (googleUser.email) {
+          setAdminEmail(googleUser.email);
+        }
+        if (googleUser.name) {
+          setAdminName(googleUser.name);
+        }
+        setIsGoogleVerified(true);
+
+        if (activeMode === 'register') {
+          setSuccessMessage(`Google Verified Account (${googleUser.email}) connected! Enter school name & password below to finish.`);
+          return;
+        }
+      } catch (e) {
+        console.warn('Google token decode warning:', e);
+      }
+
       setLoading(true);
       await loginWithGoogle({ credential: response.credential });
       setSuccessMessage('Google Sign-In successful!');
@@ -585,11 +630,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           ) : (
             /* ================= REGISTER NEW SCHOOL FORM ================= */
             <form className="space-y-2.5" onSubmit={handleRegisterSubmit}>
-              <div className="p-2.5 bg-indigo-50/70 rounded-xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-900 font-medium mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-                <span>
-                  Registering creates a brand new isolated database environment for your school.
-                </span>
+              {/* Google Fast-Fill Integration */}
+              <div className="p-2.5 bg-gradient-to-r from-indigo-50/90 to-purple-50/90 rounded-xl border border-indigo-100 shadow-2xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    Auto-Fill Email & Name with Google
+                  </span>
+                  {isGoogleVerified && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Verified Google Email
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center justify-center min-h-[38px] my-1">
+                  <div id="google-signup-btn-container" className="flex justify-center w-full"></div>
+                </div>
+
+                {isGoogleVerified && (
+                  <p className="text-[10px] text-emerald-700 font-semibold text-center mt-1 bg-emerald-50 py-1 px-2 rounded border border-emerald-200/60">
+                    ✓ Google Verified Email: <strong>{adminEmail}</strong> (Name: {adminName})
+                  </p>
+                )}
               </div>
 
               {/* School Details */}
