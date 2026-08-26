@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = '708110054977-m02s1ndnufls51hld0u0cgn61haou50q.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '708110054977-6ddbbtti80u5hue7gsi26su37tpu4k6n.apps.googleusercontent.com';
 
 interface LoginPageProps {
   initialMode?: 'login' | 'register';
