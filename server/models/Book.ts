@@ -90,4 +90,7 @@ BookSchema.pre('validate', function () {
   }
 });
 
+BookSchema.index({ school: 1, accessionNumber: 1 });
+BookSchema.index({ school: 1, title: 1 });
+
 export const Book = mongoose.model<IBook>('Book', BookSchema);
