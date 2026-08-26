@@ -5,11 +5,14 @@ import { Member } from '../models/Member.js';
 import { Assignment } from '../models/Assignment.js';
 import { LibrarySetting } from '../models/LibrarySetting.js';
 import { calculateFineBreakdown } from '../services/fineCalculator.js';
+import { getRequestSchoolId } from '../middleware/auth.js';
 
 export async function getDashboardAnalytics(req: Request, res: Response) {
   try {
+    const schoolId = getRequestSchoolId(req);
     const { categoryId } = req.query;
-    const setting = await LibrarySetting.findOne() || {
+
+    const setting = (await LibrarySetting.findOne(schoolId ? { school: schoolId } : {})) || {
       libraryName: 'School Central Library',
       schoolName: 'International Public School',
       issueDuration: 14,
@@ -23,8 +26,9 @@ export async function getDashboardAnalytics(req: Request, res: Response) {
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     const threeDaysLater = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 23, 59, 59, 999);
 
-    // Category filter condition
+    // Category & School filter condition
     const bookFilter: any = {};
+    if (schoolId) bookFilter.school = schoolId;
     if (categoryId && categoryId !== 'all') {
       bookFilter.category = categoryId;
     }
@@ -40,6 +44,7 @@ export async function getDashboardAnalytics(req: Request, res: Response) {
 
     // 2. Assignments
     let assignmentQuery: any = {};
+    if (schoolId) assignmentQuery.school = schoolId;
     if (categoryId && categoryId !== 'all') {
       const bookIds = books.map((b) => b._id);
       assignmentQuery.book = { $in: bookIds };
@@ -84,31 +89,38 @@ export async function getDashboardAnalytics(req: Request, res: Response) {
     });
 
     // 3. Member Analytics
-    const totalMembers = await Member.countDocuments();
-    const activeMembers = await Member.countDocuments({ status: 'active' });
+    const memberFilter = schoolId ? { school: schoolId } : {};
+    const totalMembers = await Member.countDocuments(memberFilter);
+    const activeMembers = await Member.countDocuments({ ...memberFilter, status: 'active' });
 
     // Distinct members with active assignments
-    const activeAssignments = await Assignment.find({ status: { $in: ['assigned', 'overdue'] } });
-    const membersWithActiveBooksSet = new Set(activeAssignments.map((a) => a.member.toString()));
+    const activeAssignments = await Assignment.find({
+      ...assignmentQuery,
+      status: { $in: ['assigned', 'overdue'] },
+    });
+    const membersWithActiveBooksSet = new Set(activeAssignments.map((a) => a.member?.toString()).filter(Boolean));
     const membersWithActiveBooks = membersWithActiveBooksSet.size;
 
     const overdueAssignments = activeAssignments.filter((a) => new Date(a.dueDate) < todayStart);
-    const membersWithOverdueBooksSet = new Set(overdueAssignments.map((a) => a.member.toString()));
+    const membersWithOverdueBooksSet = new Set(overdueAssignments.map((a) => a.member?.toString()).filter(Boolean));
     const membersWithOverdueBooks = membersWithOverdueBooksSet.size;
 
     // Members with pending fine
-    const pendingFineAssignments = await Assignment.find({ fineStatus: 'pending' });
+    const pendingFineAssignments = await Assignment.find({ ...assignmentQuery, fineStatus: 'pending' });
     const pendingFineMemberSet = new Set([
-      ...overdueAssignments.map((a) => a.member.toString()),
-      ...pendingFineAssignments.map((a) => a.member.toString()),
+      ...overdueAssignments.map((a) => a.member?.toString()).filter(Boolean),
+      ...pendingFineAssignments.map((a) => a.member?.toString()).filter(Boolean),
     ]);
     const membersWithPendingFine = pendingFineMemberSet.size;
 
     // 4. Category-wise breakdown (Chart data)
-    const categories = await BookCategory.find().sort({ name: 1 });
+    const categories = await BookCategory.find(schoolId ? { school: schoolId } : {}).sort({ name: 1 });
     const categoryAnalytics = await Promise.all(
       categories.map(async (cat) => {
-        const catBooks = await Book.find({ category: cat._id });
+        const catBooks = await Book.find({
+          category: cat._id,
+          ...(schoolId ? { school: schoolId } : {}),
+        });
         const total = catBooks.reduce((s, b) => s + (b.totalCopies || 0), 0);
         const available = catBooks.reduce((s, b) => s + (b.availableCopies || 0), 0);
         const assigned = catBooks.reduce((s, b) => s + (b.assignedCopies || 0), 0);
@@ -126,6 +138,7 @@ export async function getDashboardAnalytics(req: Request, res: Response) {
 
     // 5. Most assigned / top books
     const topBooksAggregation = await Assignment.aggregate([
+      ...(schoolId ? [{ $match: { school: schoolId } }] : []),
       { $group: { _id: '$book', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 6 },
@@ -199,7 +212,8 @@ export async function getDashboardAnalytics(req: Request, res: Response) {
 
 export async function getRecentActivity(req: Request, res: Response) {
   try {
-    const recent = await Assignment.find()
+    const schoolId = getRequestSchoolId(req);
+    const recent = await Assignment.find(schoolId ? { school: schoolId } : {})
       .populate('book', 'title author language')
       .populate('member', 'name memberId className section')
       .sort({ updatedAt: -1 })

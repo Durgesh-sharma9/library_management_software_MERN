@@ -6,11 +6,14 @@ import { Member } from '../models/Member.js';
 import { LibrarySetting } from '../models/LibrarySetting.js';
 import { LostDamageLog } from '../models/LostDamageLog.js';
 import { calculateFineBreakdown } from '../services/fineCalculator.js';
+import { getRequestSchoolId } from '../middleware/auth.js';
 
 export async function getAssignments(req: Request, res: Response) {
   try {
+    const schoolId = getRequestSchoolId(req);
     const { status, memberId, bookId, categoryId, search, fromDate, toDate } = req.query;
     const query: any = {};
+    if (schoolId) query.school = schoolId;
 
     if (memberId && memberId !== 'all') {
       const memberIdStr = String(memberId);
@@ -206,6 +209,7 @@ export async function getAssignmentById(req: Request, res: Response) {
 
 export async function createAssignment(req: Request, res: Response) {
   try {
+    const schoolId = getRequestSchoolId(req);
     const { memberId, bookId, copyNumber, accessionNumber, assignedDate, dueDate, remarks } = req.body;
 
     if (!memberId || !bookId || !dueDate) {
@@ -216,7 +220,7 @@ export async function createAssignment(req: Request, res: Response) {
     }
 
     // Verify Member
-    const member = await Member.findById(memberId);
+    const member = await Member.findOne(schoolId ? { _id: memberId, school: schoolId } : { _id: memberId });
     if (!member) {
       return res.status(400).json({ success: false, message: 'Member not found' });
     }
@@ -228,11 +232,12 @@ export async function createAssignment(req: Request, res: Response) {
     }
 
     // Check maximum books limit per member
-    const setting = await LibrarySetting.findOne();
+    const setting = await LibrarySetting.findOne(schoolId ? { school: schoolId } : {});
     const maxLimit = setting?.maxBooksPerMember || 3;
     const activeBorrowCount = await Assignment.countDocuments({
       member: memberId,
       status: { $in: ['assigned', 'overdue'] },
+      ...(schoolId ? { school: schoolId } : {}),
     });
 
     if (activeBorrowCount >= maxLimit) {
@@ -244,7 +249,7 @@ export async function createAssignment(req: Request, res: Response) {
     }
 
     // Verify Book availability
-    const book = await Book.findById(bookId);
+    const book = await Book.findOne(schoolId ? { _id: bookId, school: schoolId } : { _id: bookId });
     if (!book) {
       return res.status(400).json({ success: false, message: 'Book not found' });
     }
@@ -329,6 +334,7 @@ export async function createAssignment(req: Request, res: Response) {
       member: memberId,
       book: bookId,
       status: { $in: ['assigned', 'overdue'] },
+      ...(schoolId ? { school: schoolId } : {}),
     });
     if (existingActive) {
       return res.status(400).json({
@@ -346,6 +352,7 @@ export async function createAssignment(req: Request, res: Response) {
 
     // Create Assignment record
     const assignment = await Assignment.create({
+      school: schoolId,
       member: member._id,
       book: book._id,
       copyNumber: targetCopy.copyNumber,

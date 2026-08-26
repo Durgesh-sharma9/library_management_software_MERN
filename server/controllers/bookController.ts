@@ -7,6 +7,7 @@ import { Member } from '../models/Member.js';
 import { Supplier } from '../models/Supplier.js';
 import { Shelf } from '../models/Shelf.js';
 import { LibrarySetting } from '../models/LibrarySetting.js';
+import { getRequestSchoolId } from '../middleware/auth.js';
 
 function parseAccessionDetails(
   inputAcc: string | undefined,
@@ -51,7 +52,8 @@ function parseAccessionDetails(
 
 export async function getNextAccessionNumber(req: Request, res: Response) {
   try {
-    const settings = await LibrarySetting.findOne();
+    const schoolId = getRequestSchoolId(req);
+    const settings = await LibrarySetting.findOne(schoolId ? { school: schoolId } : {});
     const prefix = (settings?.accessionPrefix || 'ACC').trim().toUpperCase();
     const startNum = settings?.accessionStartNumber !== undefined ? settings.accessionStartNumber : 1;
     const padding = settings?.accessionPadding || 4;
@@ -61,7 +63,7 @@ export async function getNextAccessionNumber(req: Request, res: Response) {
     const escapedSep = separator ? separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
     const pattern = new RegExp(`^${escapedPrefix}${escapedSep}?(\\d+)`, 'i');
 
-    const matchingBooks = await Book.find({}).select('accessionNumber copiesList');
+    const matchingBooks = await Book.find(schoolId ? { school: schoolId } : {}).select('accessionNumber copiesList');
 
     let maxNum = -1;
     for (const b of matchingBooks) {
@@ -106,8 +108,12 @@ export async function getNextAccessionNumber(req: Request, res: Response) {
 
 export async function getBooks(req: Request, res: Response) {
   try {
+    const schoolId = getRequestSchoolId(req);
     const { search, category, subCategory, language, status, supplier, shelfLocation } = req.query;
     const query: any = {};
+    if (schoolId) {
+      query.school = schoolId;
+    }
 
     if (search && typeof search === 'string' && search.trim() !== '') {
       const regex = new RegExp(search.trim(), 'i');
@@ -263,6 +269,7 @@ export async function getBookById(req: Request, res: Response) {
 
 export async function createBook(req: Request, res: Response) {
   try {
+    const schoolId = getRequestSchoolId(req);
     let {
       accessionNumber,
       title,
@@ -288,8 +295,8 @@ export async function createBook(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: 'Available copies / quantity must be greater than 0' });
     }
 
-    // Verify category exists and is active
-    const categoryDoc = await BookCategory.findById(category);
+    // Verify category exists and belongs to school
+    const categoryDoc = await BookCategory.findOne(schoolId ? { _id: category, school: schoolId } : { _id: category });
     if (!categoryDoc) {
       return res.status(400).json({ success: false, message: 'Selected category does not exist' });
     }
@@ -306,7 +313,7 @@ export async function createBook(req: Request, res: Response) {
     }
 
     // Fetch settings for accession formatting
-    const settings = await LibrarySetting.findOne();
+    const settings = await LibrarySetting.findOne(schoolId ? { school: schoolId } : {});
     const defaultPrefix = (settings?.accessionPrefix || 'ACC').trim().toUpperCase();
     const defaultStartNum = settings?.accessionStartNumber !== undefined ? settings.accessionStartNumber : 1;
     const defaultPadding = settings?.accessionPadding || 4;
@@ -326,7 +333,7 @@ export async function createBook(req: Request, res: Response) {
       const escapedSep = accDetails.separator ? accDetails.separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
       const pattern = new RegExp(`^${escapedPrefix}${escapedSep}?(\\d+)`, 'i');
 
-      const allBooks = await Book.find({}).select('accessionNumber copiesList');
+      const allBooks = await Book.find(schoolId ? { school: schoolId } : {}).select('accessionNumber copiesList');
       let maxNum = -1;
       for (const b of allBooks) {
         if (b.accessionNumber) {
@@ -368,8 +375,9 @@ export async function createBook(req: Request, res: Response) {
       const curSeq = accDetails.startNum + i;
       const copyAccNum = `${accDetails.prefix}${accDetails.separator}${String(curSeq).padStart(accDetails.padding, '0')}`;
 
-      // Ensure no duplicate accession number exists in DB
+      // Ensure no duplicate accession number exists in DB for this school
       const existingCopy = await Book.findOne({
+        ...(schoolId ? { school: schoolId } : {}),
         $or: [
           { accessionNumber: copyAccNum },
           { 'copiesList.accessionNumber': copyAccNum },
@@ -408,11 +416,12 @@ export async function createBook(req: Request, res: Response) {
     // Optional supplier validation
     let validSupplier = null;
     if (supplier && supplier !== 'none' && supplier !== '') {
-      const supDoc = await Supplier.findById(supplier);
+      const supDoc = await Supplier.findOne(schoolId ? { _id: supplier, school: schoolId } : { _id: supplier });
       if (supDoc) validSupplier = supDoc._id;
     }
 
     const book = await Book.create({
+      school: schoolId,
       accessionNumber: displayAccession,
       title: title.trim(),
       author: author.trim(),
