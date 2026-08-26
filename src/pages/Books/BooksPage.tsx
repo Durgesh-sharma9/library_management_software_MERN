@@ -856,7 +856,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
           )}
 
           {/* ImageKit Cover Photo Upload */}
-          <div className="p-3 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+          <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100/80">
             <label className="block text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-indigo-600" />
@@ -875,7 +875,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
             <div className="flex items-center gap-3">
               {formData.coverImage ? (
-                <div className="w-16 h-20 rounded-xl overflow-hidden border-2 border-indigo-200 shadow-sm shrink-0 relative group bg-white">
+                <div className="w-14 h-16 rounded-xl overflow-hidden border-2 border-indigo-200 shadow-xs shrink-0 relative group bg-white">
                   <img
                     src={formData.coverImage}
                     alt="Book Cover"
@@ -892,35 +892,25 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                   </div>
                 </div>
               ) : (
-                <div className="w-16 h-20 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center shrink-0 text-slate-400">
-                  <BookOpen className="w-6 h-6 text-indigo-300 mb-1" />
-                  <span className="text-[9px] font-bold text-indigo-400">Cover</span>
+                <div className="w-14 h-16 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center shrink-0 text-slate-400 shadow-2xs">
+                  <BookOpen className="w-5 h-5 text-indigo-300 mb-0.5" />
+                  <span className="text-[8px] font-bold text-indigo-400">Cover</span>
                 </div>
               )}
 
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm">
-                    <Upload className="w-3.5 h-3.5 text-indigo-200" />
-                    <span>{uploadingImage ? 'Uploading to ImageKit...' : 'Upload Image to ImageKit'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageFileChange}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
-                </div>
-
-                <input
-                  type="url"
-                  value={formData.coverImage}
-                  onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-                  placeholder="Or paste ImageKit URL (https://ik.imagekit.io/...)"
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:outline-hidden focus:border-indigo-600"
-                />
+              <div className="flex-1 flex items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                  <Upload className="w-4 h-4 text-indigo-200" />
+                  <span>{uploadingImage ? 'Uploading to ImageKit CDN...' : 'Upload Book Cover Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageFileChange}
+                    disabled={uploadingImage}
+                  />
+                </label>
+                {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
               </div>
             </div>
           </div>
@@ -1240,7 +1230,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
           )}
 
           {/* ImageKit Cover Photo Upload */}
-          <div className="p-3 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+          <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100/80">
             <label className="block text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-indigo-600" />
@@ -1259,7 +1249,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
             <div className="flex items-center gap-3">
               {formData.coverImage ? (
-                <div className="w-16 h-20 rounded-xl overflow-hidden border-2 border-indigo-200 shadow-sm shrink-0 relative group bg-white">
+                <div className="w-14 h-16 rounded-xl overflow-hidden border-2 border-indigo-200 shadow-xs shrink-0 relative group bg-white">
                   <img
                     src={formData.coverImage}
                     alt="Book Cover"
@@ -1276,35 +1266,25 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                   </div>
                 </div>
               ) : (
-                <div className="w-16 h-20 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center shrink-0 text-slate-400">
-                  <BookOpen className="w-6 h-6 text-indigo-300 mb-1" />
-                  <span className="text-[9px] font-bold text-indigo-400">Cover</span>
+                <div className="w-14 h-16 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center shrink-0 text-slate-400 shadow-2xs">
+                  <BookOpen className="w-5 h-5 text-indigo-300 mb-0.5" />
+                  <span className="text-[8px] font-bold text-indigo-400">Cover</span>
                 </div>
               )}
 
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm">
-                    <Upload className="w-3.5 h-3.5 text-indigo-200" />
-                    <span>{uploadingImage ? 'Uploading to ImageKit...' : 'Upload Image to ImageKit'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageFileChange}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
-                </div>
-
-                <input
-                  type="url"
-                  value={formData.coverImage}
-                  onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-                  placeholder="Or paste ImageKit URL (https://ik.imagekit.io/...)"
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:outline-hidden focus:border-indigo-600"
-                />
+              <div className="flex-1 flex items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                  <Upload className="w-4 h-4 text-indigo-200" />
+                  <span>{uploadingImage ? 'Uploading to ImageKit CDN...' : 'Upload Book Cover Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageFileChange}
+                    disabled={uploadingImage}
+                  />
+                </label>
+                {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
               </div>
             </div>
           </div>
