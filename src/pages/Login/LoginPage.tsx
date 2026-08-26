@@ -17,6 +17,14 @@ import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/api';
 import { School } from '../../types';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
+const GOOGLE_CLIENT_ID = '708110054977-m02s1ndnufls51hld0u0cgn61haou50q.apps.googleusercontent.com';
+
 interface LoginPageProps {
   initialMode?: 'login' | 'register';
   onBackToLanding?: () => void;
@@ -26,7 +34,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialMode = 'login',
   onBackToLanding,
 }) => {
-  const { login, registerSchool, verifyOTP } = useAuth();
+  const { login, loginWithGoogle, registerSchool, verifyOTP } = useAuth();
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(initialMode);
 
   // OTP Verification state
@@ -59,7 +67,59 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   useEffect(() => {
     loadSchools();
+
+    // Dynamically load Google Identity Services Script
+    const existingScript = document.getElementById('google-gsi-script');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = 'google-gsi-script';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        initGoogleGIS();
+      };
+      document.body.appendChild(script);
+    } else {
+      initGoogleGIS();
+    }
   }, []);
+
+  const initGoogleGIS = () => {
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+      });
+
+      const container = document.getElementById('google-btn-container');
+      if (container) {
+        window.google.accounts.id.renderButton(container, {
+          theme: 'outline',
+          size: 'medium',
+          width: 280,
+          shape: 'pill',
+          text: 'signin_with',
+        });
+      }
+    }
+  };
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    if (!response || !response.credential) return;
+    try {
+      setError('');
+      setSuccessMessage('');
+      setLoading(true);
+      await loginWithGoogle({ credential: response.credential });
+      setSuccessMessage('Google Sign-In successful!');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadSchools = async () => {
     try {
@@ -429,6 +489,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </>
                   )}
                 </button>
+              </div>
+
+              {/* Google Sign-In Divider & Official GIS Button */}
+              <div className="relative my-2.5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
+                  <span className="bg-white px-2">Or Login With</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center min-h-[40px]">
+                <div id="google-btn-container" className="flex justify-center w-full"></div>
               </div>
 
               {/* Quick Demo Credentials */}

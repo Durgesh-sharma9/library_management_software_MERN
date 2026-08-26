@@ -10,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isImpersonating: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (payload: { credential?: string; email?: string; name?: string }) => Promise<void>;
   registerSchool: (payload: {
     schoolName: string;
     libraryName?: string;
@@ -159,6 +160,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (payload: { credential?: string; email?: string; name?: string }) => {
+    const res = await authService.googleLogin(payload);
+    if (res && res.user && res.token) {
+      setToken(res.token);
+      setUser(res.user);
+      localStorage.setItem('library_token', res.token);
+      localStorage.setItem('library_user', JSON.stringify(res.user));
+    }
+  };
+
   const registerSchool = async (payload: {
     schoolName: string;
     libraryName?: string;
@@ -218,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isImpersonating,
         login,
+        loginWithGoogle,
         registerSchool,
         verifyOTP,
         logout,

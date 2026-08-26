@@ -109,6 +109,10 @@ export const authService = {
     const res = await api.post('/auth/resend-otp', { email });
     return res.data;
   },
+  googleLogin: async (payload: { credential?: string; email?: string; name?: string }): Promise<{ success: boolean; token: string; user: User; message: string }> => {
+    const res = await api.post('/auth/google', payload);
+    return res.data;
+  },
   getSchools: async (): Promise<{ schools: Array<{ _id: string; name: string; code: string; libraryName: string; city?: string }> }> => {
     const res = await api.get('/auth/schools');
     return res.data;

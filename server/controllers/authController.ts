@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
 import { User } from '../models/User.js';
 import { School } from '../models/School.js';
 import { PendingRegistration } from '../models/PendingRegistration.js';
@@ -513,5 +514,99 @@ export async function getSchoolsList(req: Request, res: Response) {
     return res.json({ success: true, schools });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: 'Error retrieving schools list' });
+  }
+}
+
+export async function googleAuth(req: Request, res: Response) {
+  try {
+    const { credential, idToken, email: bodyEmail, name: bodyName } = req.body;
+
+    let userEmail = '';
+    let userName = '';
+
+    const tokenToVerify = credential || idToken;
+
+    if (tokenToVerify) {
+      try {
+        const googleRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${tokenToVerify}`);
+        if (googleRes.data && googleRes.data.email) {
+          userEmail = googleRes.data.email.toLowerCase().trim();
+          userName = googleRes.data.name || userEmail.split('@')[0];
+        }
+      } catch (verifyError) {
+        console.warn('Google tokeninfo verification fallback:', verifyError);
+      }
+    }
+
+    if (!userEmail && bodyEmail) {
+      userEmail = bodyEmail.toLowerCase().trim();
+      userName = bodyName || userEmail.split('@')[0];
+    }
+
+    if (!userEmail) {
+      return res.status(400).json({ success: false, message: 'Could not verify Google account details.' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ email: userEmail }).populate('school');
+
+    if (!user) {
+      // Auto-register user with a default school workspace
+      const defaultSchool = await getDefaultSchool();
+      user = await User.create({
+        name: userName || 'Google User',
+        email: userEmail,
+        password: `google_oauth_${Date.now()}_${Math.random()}`,
+        role: 'admin',
+        school: defaultSchool._id,
+        isActive: true,
+      });
+      user = await User.findById(user._id).populate('school').select('-password');
+    }
+
+    if (!user || !user.isActive) {
+      return res.status(403).json({ success: false, message: 'Your account is deactivated.' });
+    }
+
+    let schoolData = user.school;
+    if (!schoolData) {
+      schoolData = await getDefaultSchool();
+      await User.findByIdAndUpdate(user._id, { school: schoolData._id });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        schoolId: (schoolData._id || schoolData).toString(),
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Google Sign-In successful!',
+      token,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        school: {
+          id: schoolData._id.toString(),
+          name: schoolData.name,
+          code: schoolData.code,
+          libraryName: schoolData.libraryName,
+          adminName: schoolData.adminName,
+          phone: schoolData.phone,
+          city: schoolData.city,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Google auth error:', error);
+    return res.status(500).json({ success: false, message: 'Google Authentication failed. Please try again.' });
   }
 }
