@@ -21,7 +21,8 @@ interface AuthContextType {
     address?: string;
     city?: string;
     state?: string;
-  }) => Promise<void>;
+  }) => Promise<{ success: boolean; requiresOTP?: boolean; email?: string; message: string; token?: string; user?: User }>;
+  verifyOTP: (email: string, otp: string) => Promise<void>;
   logout: () => void;
   switchSession: (newToken: string, newUser: User, isImpersonate?: boolean) => void;
   returnToSuperAdmin: () => void;
@@ -177,6 +178,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('library_token', res.token);
       localStorage.setItem('library_user', JSON.stringify(res.user));
     }
+    return res;
+  };
+
+  const verifyOTP = async (email: string, otp: string) => {
+    const res = await authService.verifyOTP(email, otp);
+    if (res && res.user && res.token) {
+      setToken(res.token);
+      setUser(res.user);
+      localStorage.setItem('library_token', res.token);
+      localStorage.setItem('library_user', JSON.stringify(res.user));
+    }
   };
 
   const logout = () => {
@@ -207,6 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isImpersonating,
         login,
         registerSchool,
+        verifyOTP,
         logout,
         switchSession,
         returnToSuperAdmin,

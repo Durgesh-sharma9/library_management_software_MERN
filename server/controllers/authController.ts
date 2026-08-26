@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { School } from '../models/School.js';
+import { PendingRegistration } from '../models/PendingRegistration.js';
 import { AuthRequest, getDefaultSchool } from '../middleware/auth.js';
 import { seedNewSchoolDefaults } from '../services/seed.js';
+import { sendVerificationOTPEmail } from '../services/emailService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'school_library_jwt_secret_key_2026';
 
@@ -40,49 +42,134 @@ export async function registerSchool(req: Request, res: Response) {
       });
     }
 
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Save pending registration
+    await PendingRegistration.deleteMany({ email: normalizedEmail });
+    await PendingRegistration.create({
+      email: normalizedEmail,
+      otp,
+      otpExpiresAt,
+      registrationData: {
+        schoolName: schoolName.trim(),
+        libraryName: libraryName?.trim() || '',
+        schoolCode: schoolCode?.trim() || '',
+        adminName: adminName.trim(),
+        email: normalizedEmail,
+        password,
+        phone: phone?.trim() || '',
+        address: address?.trim() || '',
+        city: city?.trim() || '',
+        state: state?.trim() || '',
+      },
+    });
+
+    // Try sending email via SMTP
+    try {
+      await sendVerificationOTPEmail(normalizedEmail, otp, schoolName.trim());
+    } catch (mailError: any) {
+      console.error('SMTP Email Send Error:', mailError);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to send verification email to ${normalizedEmail}. Error: ${mailError.message || 'SMTP Connection Failed'}`,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      requiresOTP: true,
+      email: normalizedEmail,
+      message: `Verification code sent to ${normalizedEmail}. Please check your email inbox to verify.`,
+    });
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Server error during school registration. Please try again.',
+    });
+  }
+}
+
+export async function verifySignupOTP(req: Request, res: Response) {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and 6-digit OTP code are required.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const cleanOTP = otp.trim();
+
+    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    if (!pending) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending registration found for this email address or OTP expired. Please signup again.',
+      });
+    }
+
+    if (pending.otpExpiresAt < new Date()) {
+      await PendingRegistration.deleteOne({ _id: pending._id });
+      return res.status(400).json({
+        success: false,
+        message: 'Verification OTP code has expired. Please request a new code.',
+      });
+    }
+
+    if (pending.otp !== cleanOTP) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP code. Please enter the correct 6-digit code sent to your email.',
+      });
+    }
+
+    // OTP verified! Now create School & User
+    const reg = pending.registrationData;
+
     // Generate unique school code
-    let generatedCode = (schoolCode || '')
+    let generatedCode = (reg.schoolCode || '')
       .trim()
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '');
 
     if (!generatedCode) {
-      const words = schoolName.trim().split(/\s+/);
+      const words = reg.schoolName.trim().split(/\s+/);
       if (words.length >= 2) {
         generatedCode = words.map((w: string) => w[0]).join('').toUpperCase().slice(0, 6);
       } else {
-        generatedCode = schoolName.slice(0, 4).toUpperCase();
+        generatedCode = reg.schoolName.slice(0, 4).toUpperCase();
       }
     }
 
-    // Ensure uniqueness of school code
     let finalCode = generatedCode;
     let counter = 1;
     while (await School.findOne({ code: finalCode })) {
       finalCode = `${generatedCode}${counter++}`;
     }
 
-    const effectiveLibraryName = libraryName?.trim() || `${schoolName.trim()} Central Library`;
+    const effectiveLibraryName = reg.libraryName?.trim() || `${reg.schoolName.trim()} Central Library`;
 
     // 1. Create School
     const school = await School.create({
-      name: schoolName.trim(),
+      name: reg.schoolName.trim(),
       code: finalCode,
       libraryName: effectiveLibraryName,
-      adminName: adminName.trim(),
+      adminName: reg.adminName.trim(),
       email: normalizedEmail,
-      phone: phone?.trim() || '',
-      address: address?.trim() || '',
-      city: city?.trim() || '',
-      state: state?.trim() || '',
+      phone: reg.phone || '',
+      address: reg.address || '',
+      city: reg.city || '',
+      state: reg.state || '',
       isActive: true,
     });
 
     // 2. Create Admin User
     const user = await User.create({
-      name: adminName.trim(),
+      name: reg.adminName.trim(),
       email: normalizedEmail,
-      password,
+      password: reg.password,
       role: 'admin',
       school: school._id,
       isActive: true,
@@ -94,8 +181,11 @@ export async function registerSchool(req: Request, res: Response) {
       school.name,
       school.libraryName,
       normalizedEmail,
-      phone?.trim()
+      reg.phone
     );
+
+    // Remove pending registration record
+    await PendingRegistration.deleteOne({ _id: pending._id });
 
     // 4. Generate JWT
     const token = jwt.sign(
@@ -111,7 +201,7 @@ export async function registerSchool(req: Request, res: Response) {
 
     return res.status(201).json({
       success: true,
-      message: 'School registered and library system activated successfully!',
+      message: 'Email verified successfully! School registered and library activated.',
       token,
       user: {
         id: user._id.toString(),
@@ -130,11 +220,39 @@ export async function registerSchool(req: Request, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error('Registration error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error?.message || 'Server error during school registration. Please try again.',
+    console.error('Verify OTP Error:', error);
+    return res.status(500).json({ success: false, message: 'Server error during OTP verification' });
+  }
+}
+
+export async function resendSignupOTP(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required to resend OTP.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+
+    if (!pending) {
+      return res.status(400).json({ success: false, message: 'No pending registration found for this email.' });
+    }
+
+    const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    pending.otp = newOTP;
+    pending.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await pending.save();
+
+    await sendVerificationOTPEmail(normalizedEmail, newOTP, pending.registrationData.schoolName);
+
+    return res.json({
+      success: true,
+      message: `A new 6-digit verification code has been sent to ${normalizedEmail}.`,
     });
+  } catch (error: any) {
+    console.error('Resend OTP Error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to resend OTP email.' });
   }
 }
 

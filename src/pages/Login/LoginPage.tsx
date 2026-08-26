@@ -26,8 +26,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialMode = 'login',
   onBackToLanding,
 }) => {
-  const { login, registerSchool } = useAuth();
+  const { login, registerSchool, verifyOTP } = useAuth();
   const [activeMode, setActiveMode] = useState<'login' | 'register'>(initialMode);
+
+  // OTP Verification state
+  const [showOTPVerification, setShowOTPVerification] = useState<boolean>(false);
+  const [otpCode, setOtpCode] = useState<string>('');
+  const [pendingEmail, setPendingEmail] = useState<string>('');
+  const [resendingOTP, setResendingOTP] = useState<boolean>(false);
 
   // Login form state
   const [email, setEmail] = useState('');
@@ -111,8 +117,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     try {
       setError('');
+      setSuccessMessage('');
       setLoading(true);
-      await registerSchool({
+      const res = await registerSchool({
         schoolName: schoolName.trim(),
         schoolCode: schoolCode.trim() || undefined,
         adminName: adminName.trim(),
@@ -122,13 +129,54 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         city: city.trim() || undefined,
         contactPhone: contactPhone.trim() || undefined,
       });
-      setSuccessMessage(`School "${schoolName}" registered successfully! Redirecting...`);
+
+      if (res && res.requiresOTP) {
+        setPendingEmail(adminEmail.trim().toLowerCase());
+        setShowOTPVerification(true);
+        setSuccessMessage(`Verification 6-digit OTP sent to ${adminEmail}. Please check your email inbox!`);
+      } else {
+        setSuccessMessage(`School "${schoolName}" registered successfully! Redirecting...`);
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.message || 'Failed to register school. Please check your input and try again.'
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOTPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setError('Please enter the complete 6-digit verification code sent to your email.');
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccessMessage('');
+      setLoading(true);
+      await verifyOTP(pendingEmail, otpCode.trim());
+      setSuccessMessage('Email verified successfully! Welcome to your library portal.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP code. Please check and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      setError('');
+      setSuccessMessage('');
+      setResendingOTP(true);
+      const res = await authService.resendOTP(pendingEmail);
+      setSuccessMessage(res.message || 'A new verification code has been sent to your email.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to resend verification code.');
+    } finally {
+      setResendingOTP(false);
     }
   };
 
@@ -252,7 +300,77 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           )}
 
-          {activeMode === 'login' ? (
+          {showOTPVerification ? (
+            /* ================= EMAIL OTP VERIFICATION FORM ================= */
+            <form className="space-y-4" onSubmit={handleVerifyOTPSubmit}>
+              <div className="p-3 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border border-indigo-100 text-center">
+                <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">Verify Your Email Address</h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  We sent a 6-digit OTP verification code via Gmail SMTP to:
+                </p>
+                <p className="text-xs font-mono font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 inline-block mt-1">
+                  {pendingEmail}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 text-center">
+                  Enter 6-Digit Verification Code
+                </label>
+                <input
+                  id="otp-input"
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="e.g. 584920"
+                  className="block w-full px-3 py-2.5 bg-slate-50 border-2 border-indigo-200 rounded-xl text-center text-xl tracking-[8px] font-mono font-extrabold text-indigo-900 focus:bg-white focus:outline-hidden focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
+              </div>
+
+              <button
+                id="verify-otp-btn"
+                type="submit"
+                disabled={loading || otpCode.length !== 6}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-70 cursor-pointer"
+              >
+                {loading ? (
+                  <span>Verifying Code...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Verify Email & Complete Registration</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={resendingOTP}
+                  className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  {resendingOTP ? 'Sending Code...' : 'Resend OTP Email'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOTPVerification(false);
+                    setError('');
+                    setSuccessMessage('');
+                  }}
+                  className="text-slate-500 hover:text-slate-700 font-semibold cursor-pointer"
+                >
+                  Edit Email Address
+                </button>
+              </div>
+            </form>
+          ) : activeMode === 'login' ? (
             /* ================= LOGIN FORM ================= */
             <form className="space-y-3" onSubmit={handleLoginSubmit}>
               <div>

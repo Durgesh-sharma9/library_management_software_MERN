@@ -97,8 +97,16 @@ export const authService = {
     address?: string;
     city?: string;
     state?: string;
-  }): Promise<{ token: string; user: User; message: string }> => {
+  }): Promise<{ success: boolean; requiresOTP?: boolean; email?: string; message: string; token?: string; user?: User }> => {
     const res = await api.post('/auth/register', payload);
+    return res.data;
+  },
+  verifyOTP: async (email: string, otp: string): Promise<{ success: boolean; token: string; user: User; message: string }> => {
+    const res = await api.post('/auth/verify-otp', { email, otp });
+    return res.data;
+  },
+  resendOTP: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const res = await api.post('/auth/resend-otp', { email });
     return res.data;
   },
   getSchools: async (): Promise<{ schools: Array<{ _id: string; name: string; code: string; libraryName: string; city?: string }> }> => {
