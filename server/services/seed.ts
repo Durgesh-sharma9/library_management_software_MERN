@@ -83,65 +83,6 @@ export async function seedNewSchoolDefaults(
         isActive: true,
       }))
     );
-
-    // 4. Predefined Book Categories
-    const categoriesDefinition = [
-      {
-        name: 'Story Books',
-        description: 'Fiction, Novels, and Folktales for all age groups',
-        subCategories: ['Fiction', 'Classic', 'Fantasy', 'Mystery', 'Adventure', 'Comics', 'Folktales'],
-      },
-      {
-        name: 'Science',
-        description: 'Physics, Chemistry, Biology, Environmental science and space',
-        subCategories: ['Physics', 'Chemistry', 'Biology', 'Astronomy', 'Environment', 'Experiments'],
-      },
-      {
-        name: 'Mathematics',
-        description: 'Applied, theoretical, and recreational mathematics',
-        subCategories: ['Algebra', 'Geometry', 'Arithmetic', 'Statistics', 'Trigonometry', 'Vedic Math'],
-      },
-      {
-        name: 'English',
-        description: 'English Grammar, Literature, Comprehension and Vocab',
-        subCategories: ['Grammar', 'Prose & Poetry', 'Vocabulary', 'Drama', 'Short Stories'],
-      },
-      {
-        name: 'Hindi',
-        description: 'Hindi Vyakaran, Sahitya and Kavita collections',
-        subCategories: ['Vyakaran', 'Sahitya', 'Kahaniyan', 'Kavita', 'Natak', 'Nibandh'],
-      },
-      {
-        name: 'Social Science',
-        description: 'History, Civics, Geography and Economics',
-        subCategories: ['History', 'Geography', 'Civics', 'Economics', 'World History'],
-      },
-      {
-        name: 'Computer',
-        description: 'Coding, Computer Fundamentals, AI and Robotics',
-        subCategories: ['Coding & Python', 'Artificial Intelligence', 'Web Development', 'Fundamentals', 'Robotics'],
-      },
-      {
-        name: 'General Knowledge',
-        description: 'Current Affairs, Quiz, Encyclopedia and Facts',
-        subCategories: ['Current Affairs', 'India & World', 'Quiz & Trivia', 'Science Facts', 'Encyclopedia'],
-      },
-      {
-        name: 'Literature & Arts',
-        description: 'Art, Drawing, Music, Biographies and Poetry',
-        subCategories: ['Poetry', 'Drama', 'Biographies', 'Art & Painting', 'Music'],
-      },
-    ];
-
-    await BookCategory.insertMany(
-      categoriesDefinition.map((cat) => ({
-        school: schoolId,
-        name: cat.name,
-        description: cat.description,
-        subCategories: cat.subCategories,
-        isActive: true,
-      }))
-    );
   } catch (error) {
     console.error('Error seeding new school defaults:', error);
   }
