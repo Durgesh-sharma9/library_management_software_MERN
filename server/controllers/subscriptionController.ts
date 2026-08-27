@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import { AuthRequest } from '../middleware/auth.js';
 import { Plan } from '../models/Plan.js';
 import { School } from '../models/School.js';
@@ -181,3 +183,144 @@ export async function getSchoolRequestHistory(req: AuthRequest, res: Response) {
     return res.status(500).json({ success: false, message: 'Failed to fetch request history' });
   }
 }
+
+// 5. Initialize Razorpay Order for Plan Purchase
+export async function createRazorpayOrder(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) {
+      return res.status(400).json({ success: false, message: 'No school associated with this user' });
+    }
+
+    const { planId, billingCycle = 'yearly' } = req.body;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'Plan ID is required' });
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Plan not found' });
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TNFrLSunBdtmcv';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'rYqvnc8Q8GqIpXT6ZSNKp7Ly';
+
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+
+    const amountInPaise = Math.round((plan.price || 1) * 100);
+
+    const options = {
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `rcpt_plan_${Date.now()}`,
+      notes: {
+        schoolId: req.schoolId.toString(),
+        planId: plan._id.toString(),
+        planName: plan.name,
+        billingCycle,
+      },
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    return res.json({
+      success: true,
+      keyId,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      plan: {
+        id: plan._id,
+        name: plan.name,
+        price: plan.price,
+        description: plan.description,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error creating Razorpay order:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to initialize Razorpay order',
+    });
+  }
+}
+
+// 6. Verify Razorpay Payment Signature & Upgrade School Subscription
+export async function verifyRazorpayPayment(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) {
+      return res.status(400).json({ success: false, message: 'No school associated with this user' });
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId, billingCycle = 'yearly' } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !planId) {
+      return res.status(400).json({ success: false, message: 'Invalid payment verification parameters' });
+    }
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'rYqvnc8Q8GqIpXT6ZSNKp7Ly';
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Payment signature verification failed!' });
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Plan not found' });
+    }
+
+    // Immediately activate/upgrade subscription for school
+    const now = new Date();
+    const durationDays = billingCycle === 'monthly' ? 30 : 365;
+    const planExpiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    const updatedSchool = await School.findByIdAndUpdate(
+      req.schoolId,
+      {
+        plan: plan._id,
+        planExpiresAt,
+        status: 'active',
+        isActive: true,
+      },
+      { new: true }
+    ).populate('plan');
+
+    // Create completed subscription request record for history audit
+    await SubscriptionRequest.create({
+      school: req.schoolId,
+      plan: plan._id,
+      requestedBy: req.user?._id,
+      billingCycle,
+      durationDays,
+      amount: plan.price,
+      paymentMode: 'razorpay',
+      transactionReference: razorpay_payment_id,
+      schoolNotes: `Razorpay Payment Successful (Order ID: ${razorpay_order_id})`,
+      status: 'approved',
+      reviewedBy: req.user?._id,
+      reviewedAt: new Date(),
+      adminRemarks: 'Auto-approved upon verified Razorpay online payment',
+    });
+
+    return res.json({
+      success: true,
+      message: `🎉 Payment Successful! Your subscription has been upgraded to '${plan.name}'!`,
+      school: updatedSchool,
+    });
+  } catch (error: any) {
+    console.error('Error verifying Razorpay payment:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Payment verification failed',
+    });
+  }
+}
+

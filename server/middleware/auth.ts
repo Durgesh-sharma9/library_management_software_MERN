@@ -14,9 +14,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'school_library_jwt_secret_key_2026
 
 export function getRequestSchoolId(req: Request): mongoose.Types.ObjectId | undefined {
   const authReq = req as AuthRequest;
+
+  // Header check (superadmin impersonation or direct header)
+  const headerSchoolId = req.headers['x-school-id'] as string;
+  if (headerSchoolId && mongoose.Types.ObjectId.isValid(headerSchoolId)) {
+    return new mongoose.Types.ObjectId(headerSchoolId);
+  }
+
   if (authReq.schoolId) return authReq.schoolId;
   const raw = authReq.user?.school?._id || authReq.user?.school;
-  if (raw) {
+  if (raw && mongoose.Types.ObjectId.isValid(raw.toString())) {
     return new mongoose.Types.ObjectId(raw.toString());
   }
   return undefined;

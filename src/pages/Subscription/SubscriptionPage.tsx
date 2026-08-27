@@ -144,6 +144,77 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = () => {
     }
   };
 
+  const handleRazorpayCheckout = async (plan: Plan) => {
+    try {
+      setSubmitting(true);
+
+      const orderData = await subscriptionService.createRazorpayOrder({
+        planId: plan._id,
+        billingCycle: plan.billingCycle,
+      });
+
+      if (!orderData.success || !orderData.orderId) {
+        showToast('Failed to initialize Razorpay payment order', 'error');
+        setSubmitting(false);
+        return;
+      }
+
+      const options: any = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'LibraFlow SaaS',
+        description: `Subscription Upgrade: ${plan.name}`,
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            setSubmitting(true);
+            const verifyRes = await subscriptionService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              planId: plan._id,
+              billingCycle: plan.billingCycle,
+            });
+
+            showToast(verifyRes.message || '🎉 Instant Online Upgrade Successful!', 'success');
+            setIsPurchaseModalOpen(false);
+            await loadSubscriptionData();
+          } catch (err: any) {
+            console.error('Razorpay verification error:', err);
+            showToast(err.response?.data?.message || 'Payment verification failed.', 'error');
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          name: subscription?.school?.name || 'School Admin',
+          email: 'admin@school.edu',
+        },
+        theme: {
+          color: '#4F46E5',
+        },
+      };
+
+      if ((window as any).Razorpay) {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (response: any) {
+          console.error('Razorpay payment failed:', response.error);
+          showToast(`Payment failed: ${response.error?.description || 'Transaction cancelled'}`, 'error');
+          setSubmitting(false);
+        });
+        rzp.open();
+      } else {
+        showToast('Razorpay Checkout SDK failed to load. Please refresh the page.', 'error');
+        setSubmitting(false);
+      }
+    } catch (err: any) {
+      console.error('Razorpay payment error:', err);
+      showToast(err.response?.data?.message || 'Failed to initialize online payment.', 'error');
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -365,22 +436,26 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = () => {
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <div className="mt-6 pt-4 border-t border-slate-100">
+                  {/* Action Buttons */}
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                    <button
+                      id={`razorpay-buy-btn-${plan.code}`}
+                      type="button"
+                      onClick={() => handleRazorpayCheckout(plan)}
+                      disabled={submitting}
+                      className="w-full py-3 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white shadow-md shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                      <span>{isCurrent ? 'Renew via Razorpay ⚡' : 'Buy Now with Razorpay ⚡'}</span>
+                    </button>
                     <button
                       id={`purchase-plan-btn-${plan.code}`}
                       type="button"
                       onClick={() => handleOpenPurchase(plan)}
-                      className={`w-full py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
-                        isCurrent
-                          ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                          : plan.isPopular
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-500/25'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white'
-                      }`}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
                     >
-                      <span>{isCurrent ? 'Renew / Extend Current Plan' : 'Purchase / Upgrade Plan'}</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <span>Manual / Offline Request</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -860,33 +935,44 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = () => {
               </div>
 
               {/* Modal Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsPurchaseModalOpen(false)}
+                  onClick={() => handleRazorpayCheckout(selectedPlanForPurchase)}
                   disabled={submitting}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-black shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  Cancel
+                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                  <span>Pay Now via Razorpay (Instant ⚡)</span>
                 </button>
-                <button
-                  id="submit-purchase-approval-btn"
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Submitting Request...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Send for Super Admin Approval</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPurchaseModalOpen(false)}
+                    disabled={submitting}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    id="submit-purchase-approval-btn"
+                    type="submit"
+                    disabled={submitting}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Offline Request</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

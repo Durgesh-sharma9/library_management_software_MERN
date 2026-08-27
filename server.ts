@@ -51,6 +51,7 @@ async function startServer() {
   app.use('/api/shelves', shelfRoutes);
   app.use('/api/superadmin', superAdminRoutes);
   app.use('/api/subscription', subscriptionRoutes);
+  app.use('/api/subscriptions', subscriptionRoutes); // Alias for backward compatibility
   app.use('/api/upload', uploadRoutes);
 
   // Global Error Handler for API

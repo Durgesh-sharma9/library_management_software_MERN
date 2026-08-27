@@ -7,7 +7,7 @@ export interface ISubscriptionRequest extends Document {
   billingCycle: 'monthly' | 'yearly' | 'lifetime';
   durationDays: number;
   amount: number;
-  paymentMode: 'upi' | 'bank_transfer' | 'cheque' | 'cash' | 'online' | 'po';
+  paymentMode: 'upi' | 'bank_transfer' | 'cheque' | 'cash' | 'online' | 'po' | 'razorpay';
   transactionReference: string;
   paymentReceiptUrl?: string;
   schoolNotes?: string;
@@ -33,7 +33,7 @@ const SubscriptionRequestSchema = new Schema<ISubscriptionRequest>(
     amount: { type: Number, required: true },
     paymentMode: {
       type: String,
-      enum: ['upi', 'bank_transfer', 'cheque', 'cash', 'online', 'po'],
+      enum: ['upi', 'bank_transfer', 'cheque', 'cash', 'online', 'po', 'razorpay'],
       default: 'upi',
     },
     transactionReference: { type: String, trim: true, default: '' },

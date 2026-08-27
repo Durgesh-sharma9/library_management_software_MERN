@@ -17,6 +17,7 @@ import {
   Crown,
   PanelLeftClose,
   PanelLeftOpen,
+  Boxes,
 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
@@ -29,6 +30,7 @@ export type NavTab =
   | 'assignments'
   | 'lost-damaged'
   | 'activity'
+  | 'inventory'
   | 'subscription'
   | 'settings';
 
@@ -82,9 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         id="app-sidebar"
-        className={`fixed top-0 bottom-0 left-0 z-40 bg-white/95 backdrop-blur-xl border-r border-slate-200/90 shadow-sm flex flex-col transition-all duration-300 ${
-          isCollapsed ? 'w-16' : 'w-56'
-        } ${mobileVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed top-0 bottom-0 left-0 z-40 bg-white/95 backdrop-blur-xl border-r border-slate-200/90 shadow-sm flex flex-col transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-56'
+          } ${mobileVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Compact Brand Header with Collapse Toggle Button */}
         <div className={`p-2.5 flex items-center border-b border-slate-100 bg-slate-50/70 ${isCollapsed ? 'justify-center px-1 py-3' : 'justify-between px-2.5'}`}>
@@ -141,22 +142,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Dashboard"
             onClick={() => handleNavClick('dashboard')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-sky-50 text-sky-900 font-bold border border-sky-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'dashboard'
+              ? 'bg-sky-50 text-sky-900 font-bold border border-sky-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'dashboard' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-sky-500"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'dashboard'
-                    ? 'bg-sky-500 text-white shadow-xs'
-                    : 'bg-sky-50 text-sky-600 group-hover:bg-sky-500 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'dashboard'
+                  ? 'bg-sky-500 text-white shadow-xs'
+                  : 'bg-sky-50 text-sky-600 group-hover:bg-sky-500 group-hover:text-white'
+                  }`}
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
               </div>
@@ -179,22 +178,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Books Catalog"
             onClick={() => handleNavClick('books')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'books'
-                ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'books'
+              ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'books' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-indigo-600"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'books'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'books'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
+                  }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
               </div>
@@ -210,19 +207,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               title="Members"
               onClick={() => setIsMembersSubmenuOpen(!isMembersSubmenuOpen)}
-              className={`group w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-                isMemberActive
-                  ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200/80'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-              }`}
+              className={`group w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${isMemberActive
+                ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200/80'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                }`}
             >
               <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
                 <div
-                  className={`p-1 rounded-md transition-all ${
-                    isMemberActive
-                      ? 'bg-slate-800 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
-                  }`}
+                  className={`p-1 rounded-md transition-all ${isMemberActive
+                    ? 'bg-slate-800 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
+                    }`}
                 >
                   <Users className="w-3.5 h-3.5" />
                 </div>
@@ -230,9 +225,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {!isCollapsed && (
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
-                    isMembersSubmenuOpen ? 'rotate-180 text-slate-700' : ''
-                  }`}
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${isMembersSubmenuOpen ? 'rotate-180 text-slate-700' : ''
+                    }`}
                 />
               )}
             </button>
@@ -246,17 +240,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   title="Students"
                   onClick={() => handleNavClick('students')}
-                  className={`relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2 py-1 justify-between'} rounded-md flex items-center text-xs transition-all duration-150 cursor-pointer ${
-                    activeTab === 'students'
-                      ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200 shadow-2xs'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-                  }`}
+                  className={`relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2 py-1 justify-between'} rounded-md flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'students'
+                    ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200 shadow-2xs'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                    }`}
                 >
                   <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-1.5'} truncate`}>
                     <GraduationCap
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        activeTab === 'students' ? 'text-blue-600' : 'text-blue-500'
-                      }`}
+                      className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'students' ? 'text-blue-600' : 'text-blue-500'
+                        }`}
                     />
                     {!isCollapsed && <span className="truncate">Students</span>}
                   </div>
@@ -269,17 +261,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   title="Teachers"
                   onClick={() => handleNavClick('teachers')}
-                  className={`relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2 py-1 justify-between'} rounded-md flex items-center text-xs transition-all duration-150 cursor-pointer ${
-                    activeTab === 'teachers'
-                      ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200 shadow-2xs'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-                  }`}
+                  className={`relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2 py-1 justify-between'} rounded-md flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'teachers'
+                    ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200 shadow-2xs'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                    }`}
                 >
                   <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-1.5'} truncate`}>
                     <Briefcase
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        activeTab === 'teachers' ? 'text-emerald-600' : 'text-emerald-500'
-                      }`}
+                      className={`w-3.5 h-3.5 shrink-0 ${activeTab === 'teachers' ? 'text-emerald-600' : 'text-emerald-500'
+                        }`}
                     />
                     {!isCollapsed && <span className="truncate">Teachers</span>}
                   </div>
@@ -295,22 +285,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Masters"
             onClick={() => handleNavClick('masters')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'masters'
-                ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'masters'
+              ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'masters' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-amber-500"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'masters'
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'masters'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" />
               </div>
@@ -325,22 +313,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Issue / Return"
             onClick={() => handleNavClick('assignments')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'assignments'
-                ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'assignments'
+              ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'assignments' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-purple-600"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'assignments'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'assignments'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
+                  }`}
               >
                 <ArrowLeftRight className="w-3.5 h-3.5" />
               </div>
@@ -355,22 +341,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Lost / Damaged"
             onClick={() => handleNavClick('lost-damaged')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'lost-damaged'
-                ? 'bg-rose-50 text-rose-950 font-bold border border-rose-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'lost-damaged'
+              ? 'bg-rose-50 text-rose-950 font-bold border border-rose-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'lost-damaged' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-rose-600"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'lost-damaged'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'lost-damaged'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white'
+                  }`}
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
               </div>
@@ -385,22 +369,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Activity Logs"
             onClick={() => handleNavClick('activity')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'activity'
-                ? 'bg-teal-50 text-teal-950 font-bold border border-teal-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'activity'
+              ? 'bg-teal-50 text-teal-950 font-bold border border-teal-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'activity' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-teal-600"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'activity'
-                    ? 'bg-teal-600 text-white shadow-xs'
-                    : 'bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'activity'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white'
+                  }`}
               >
                 <History className="w-3.5 h-3.5" />
               </div>
@@ -409,28 +391,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && activeTab === 'activity' && <div className="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0"></div>}
           </button>
 
+          {/* Inventory Management */}
+          <button
+            id="nav-inventory"
+            type="button"
+            title="Inventory Management"
+            onClick={() => handleNavClick('inventory')}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'inventory'
+              ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
+          >
+            {activeTab === 'inventory' && (
+              <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-purple-600"></span>
+            )}
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
+              <div
+                className={`p-1 rounded-md transition-all ${activeTab === 'inventory'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
+                  }`}
+              >
+                <Boxes className="w-3.5 h-3.5" />
+              </div>
+              {!isCollapsed && <span className="truncate">Inventory Management</span>}
+            </div>
+            {!isCollapsed && activeTab === 'inventory' && <div className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0"></div>}
+          </button>
+
           {/* Subscription & Plans */}
           <button
             id="nav-subscription"
             type="button"
             title="Plans & Quota"
             onClick={() => handleNavClick('subscription')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'subscription'
-                ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'subscription'
+              ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'subscription' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-amber-500"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'subscription'
-                    ? 'bg-gradient-to-tr from-amber-400 via-orange-500 to-indigo-600 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'subscription'
+                  ? 'bg-gradient-to-tr from-amber-400 via-orange-500 to-indigo-600 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
+                  }`}
               >
                 <Crown className="w-3.5 h-3.5" />
               </div>
@@ -451,22 +459,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             title="Settings"
             onClick={() => handleNavClick('settings')}
-            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${
-              activeTab === 'settings'
-                ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200 shadow-2xs'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-            }`}
+            className={`group relative w-full ${isCollapsed ? 'p-2 justify-center' : 'px-2.5 py-1.5 justify-between'} rounded-lg flex items-center text-xs transition-all duration-150 cursor-pointer ${activeTab === 'settings'
+              ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200 shadow-2xs'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+              }`}
           >
             {activeTab === 'settings' && (
               <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-slate-800"></span>
             )}
             <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} min-w-0`}>
               <div
-                className={`p-1 rounded-md transition-all ${
-                  activeTab === 'settings'
-                    ? 'bg-slate-800 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
-                }`}
+                className={`p-1 rounded-md transition-all ${activeTab === 'settings'
+                  ? 'bg-slate-800 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 group-hover:bg-slate-700 group-hover:text-white'
+                  }`}
               >
                 <Settings className="w-3.5 h-3.5" />
               </div>

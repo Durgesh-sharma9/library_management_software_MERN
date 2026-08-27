@@ -31,12 +31,16 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Intercept request to add JWT
+// Intercept request to add JWT and optional School Impersonation Header
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('library_token');
     if (token && token !== 'undefined' && token !== 'null' && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const impersonatedSchoolId = localStorage.getItem('impersonated_school_id');
+    if (impersonatedSchoolId && config.headers) {
+      config.headers['x-school-id'] = impersonatedSchoolId;
     }
     return config;
   },
@@ -536,6 +540,30 @@ export const subscriptionService = {
   getMyRequests: async (): Promise<SubscriptionRequest[]> => {
     const res = await api.get('/subscription/my-requests');
     return res.data.requests;
+  },
+  createRazorpayOrder: async (data: {
+    planId: string;
+    billingCycle?: string;
+  }): Promise<{
+    success: boolean;
+    keyId: string;
+    orderId: string;
+    amount: number;
+    currency: string;
+    plan: { id: string; name: string; price: number; description?: string };
+  }> => {
+    const res = await api.post('/subscription/razorpay-order', data);
+    return res.data;
+  },
+  verifyRazorpayPayment: async (data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    planId: string;
+    billingCycle?: string;
+  }): Promise<{ success: boolean; message: string; school: School }> => {
+    const res = await api.post('/subscription/razorpay-verify', data);
+    return res.data;
   },
 };
 

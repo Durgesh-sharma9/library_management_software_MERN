@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user?.name || 'Admin'}
             </span>
             <span className="text-[9px] text-indigo-600 block font-bold uppercase tracking-wider">
-              {user?.role === 'admin' ? 'Super Admin' : 'School Admin'}
+              {user?.role === 'superadmin' ? 'SUPER ADMIN' : 'ADMIN'}
             </span>
           </div>
         </div>

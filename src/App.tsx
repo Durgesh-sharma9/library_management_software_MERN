@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { Sidebar, NavTab } from './components/Sidebar';
@@ -16,6 +16,7 @@ import { LostDamagedPage } from './pages/LostDamaged/LostDamagedPage';
 import { ActivityHistoryPage } from './pages/Activity/ActivityHistoryPage';
 import { SubscriptionPage } from './pages/Subscription/SubscriptionPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
+import { InventoryPage } from './pages/Inventory/InventoryPage';
 import { Shield, ArrowLeft, Building2 } from 'lucide-react';
 
 interface FilterNavigation {
@@ -25,19 +26,110 @@ interface FilterNavigation {
   bookId?: string;
 }
 
+const tabToPathMap: Record<NavTab, string> = {
+  dashboard: '/admin/dashboard',
+  books: '/admin/books',
+  inventory: '/admin/inventory',
+  students: '/admin/students',
+  teachers: '/admin/teachers',
+  masters: '/admin/masters',
+  assignments: '/admin/assignments',
+  'lost-damaged': '/admin/lost-damaged',
+  activity: '/admin/activity',
+  subscription: '/admin/subscription',
+  settings: '/admin/settings',
+};
+
+const pathToTabMap: Record<string, NavTab> = {
+  '/': 'dashboard',
+  '/admin': 'dashboard',
+  '/admin/': 'dashboard',
+  '/admin/dashboard': 'dashboard',
+  '/admin/books': 'books',
+  '/admin/inventory': 'inventory',
+  '/admin/students': 'students',
+  '/admin/teachers': 'teachers',
+  '/admin/masters': 'masters',
+  '/admin/assignments': 'assignments',
+  '/admin/lost-damaged': 'lost-damaged',
+  '/admin/activity': 'activity',
+  '/admin/subscription': 'subscription',
+  '/admin/settings': 'settings',
+  '/dashboard': 'dashboard',
+  '/books': 'books',
+  '/inventory': 'inventory',
+  '/students': 'students',
+  '/teachers': 'teachers',
+  '/masters': 'masters',
+  '/assignments': 'assignments',
+  '/lost-damaged': 'lost-damaged',
+  '/activity': 'activity',
+  '/subscription': 'subscription',
+  '/settings': 'settings',
+};
+
+const getTabFromPath = (pathname: string): NavTab => {
+  const normalized = pathname.toLowerCase().trim();
+  if (pathToTabMap[normalized]) return pathToTabMap[normalized];
+
+  for (const [route, tab] of Object.entries(pathToTabMap)) {
+    if (route !== '/' && route !== '/admin' && route !== '/admin/' && normalized.startsWith(route)) {
+      return tab;
+    }
+  }
+  return 'dashboard';
+};
+
 const MainApp: React.FC = () => {
   const { user, isAuthenticated, loading, isImpersonating, returnToSuperAdmin } = useAuth();
   const [authView, setAuthView] = useState<'landing' | 'auth'>('landing');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => getTabFromPath(window.location.pathname));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('sidebar_collapsed') === 'true');
   const [navigationFilters, setNavigationFilters] = useState<FilterNavigation | undefined>(undefined);
 
-  // Tab change with optional filter injection
+  // Synchronize browser back/forward popstate
+  useEffect(() => {
+    const handlePopState = () => {
+      const currentTab = getTabFromPath(window.location.pathname);
+      setActiveTab(currentTab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Sync active route for School Admin (/admin/...) and Super Admin (/super-admin)
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === 'superadmin' && !isImpersonating) {
+        if (!window.location.pathname.startsWith('/super-admin')) {
+          window.history.replaceState(null, '', '/super-admin');
+        }
+      } else {
+        const curPath = window.location.pathname.toLowerCase();
+        if (curPath === '/' || curPath === '/admin' || curPath === '/admin/' || curPath === '/login') {
+          const targetPath = tabToPathMap[activeTab] || '/admin/dashboard';
+          window.history.replaceState(null, '', targetPath);
+        } else if (!curPath.startsWith('/admin/')) {
+          const tab = getTabFromPath(curPath);
+          const targetPath = tabToPathMap[tab] || '/admin/dashboard';
+          window.history.replaceState(null, '', targetPath);
+        }
+      }
+    }
+  }, [isAuthenticated, user?.role, isImpersonating, activeTab]);
+
+  // Tab change with URL route synchronization & optional filter injection
   const handleNavigateTab = (tab: NavTab, filters?: FilterNavigation) => {
     setActiveTab(tab);
     setNavigationFilters(filters);
+
+    const targetPath = tabToPathMap[tab] || '/admin/dashboard';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
   };
 
   const handleOpenAuth = (mode: 'login' | 'register' = 'login') => {
@@ -76,6 +168,7 @@ const MainApp: React.FC = () => {
   const tabTitles: Record<NavTab, string> = {
     dashboard: 'Dashboard Overview',
     books: 'Books Master Catalog',
+    inventory: '360° Inventory & Physical Stock Audit',
     students: 'Students Directory & Library Cards',
     teachers: 'Teachers & Faculty Directory',
     masters: 'Class & Section Master Configuration',
@@ -112,10 +205,7 @@ const MainApp: React.FC = () => {
         {/* Sidebar Navigation */}
         <Sidebar
           activeTab={activeTab}
-          onSelectTab={(tab) => {
-            setActiveTab(tab);
-            setNavigationFilters(undefined);
-          }}
+          onSelectTab={(tab) => handleNavigateTab(tab, undefined)}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
           isCollapsed={isSidebarCollapsed}
@@ -150,6 +240,10 @@ const MainApp: React.FC = () => {
 
             {activeTab === 'books' && (
               <BooksPage initialFilter={navigationFilters} />
+            )}
+
+            {activeTab === 'inventory' && (
+              <InventoryPage onNavigateTab={handleNavigateTab as any} />
             )}
 
             {activeTab === 'students' && (
