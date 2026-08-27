@@ -27,6 +27,7 @@ import {
   Percent,
   ShieldAlert,
   Archive,
+  RotateCcw,
 } from 'lucide-react';
 import { assignmentService, bookService, memberService, categoryService, lostDamagedService } from '../../services/api';
 import { Assignment, Book, Member, BookCategory } from '../../types';
@@ -64,6 +65,19 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
   // Reissue Modal
   const [isReissueModalOpen, setIsReissueModalOpen] = useState<boolean>(false);
   const [selectedAssignmentForReissue, setSelectedAssignmentForReissue] = useState<Assignment | null>(null);
+
+  // Return Modal
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
+  const [selectedAssignmentForReturn, setSelectedAssignmentForReturn] = useState<Assignment | null>(null);
+  const [returnForm, setReturnForm] = useState<{
+    returnDate: string;
+    finePaid: boolean;
+    remarks: string;
+  }>({
+    returnDate: new Date().toISOString().split('T')[0],
+    finePaid: true,
+    remarks: '',
+  });
   const [reissueForm, setReissueForm] = useState<{
     newDueDate: string;
     remarks: string;
@@ -591,6 +605,46 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
     }
   };
 
+  const handleOpenReturnModal = (assignment: Assignment) => {
+    setFormError('');
+    setSelectedAssignmentForReturn(assignment);
+    setReturnForm({
+      returnDate: new Date().toISOString().split('T')[0],
+      finePaid: true,
+      remarks: '',
+    });
+    setIsReturnModalOpen(true);
+  };
+
+  const handleReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAssignmentForReturn) return;
+
+    try {
+      setSubmitting(true);
+      setFormError('');
+
+      const res = await assignmentService.returnBook(selectedAssignmentForReturn._id, {
+        returnDate: returnForm.returnDate,
+        finePaid: returnForm.finePaid,
+        remarks: returnForm.remarks.trim(),
+      });
+
+      setIsReturnModalOpen(false);
+      setFeedbackMessage({
+        type: 'success',
+        text: res.message || `Book "${selectedAssignmentForReturn.book?.title}" returned to inventory successfully!`,
+      });
+
+      fetchAssignments();
+      fetchDropdownData();
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || 'Failed to return book.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleFineSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAssignmentForFine) return;
@@ -684,13 +738,23 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
 
   // Book Options searchable by Title or Accession / Serial number
   const bookOptions: Option[] = books
-    .filter((b) => b.availableCopies > 0 && b.isActive)
-    .map((b) => ({
-      id: b._id,
-      value: b._id,
-      label: b.title,
-      subLabel: `${b.accessionNumber ? `Acc No: ${b.accessionNumber} • ` : ''}Author: ${b.author} • In Stock: ${b.availableCopies} available copy/copies`,
-    }));
+    .filter((b) => {
+      const availCount = b.copiesList && b.copiesList.length > 0
+        ? b.copiesList.filter((c) => c.status === 'available').length
+        : (b.availableCopies || 0);
+      return availCount > 0 && b.isActive;
+    })
+    .map((b) => {
+      const availCount = b.copiesList && b.copiesList.length > 0
+        ? b.copiesList.filter((c) => c.status === 'available').length
+        : (b.availableCopies || 0);
+      return {
+        id: b._id,
+        value: b._id,
+        label: b.title,
+        subLabel: `${b.accessionNumber ? `Acc No: ${b.accessionNumber} • ` : ''}Author: ${b.author} • In Stock: ${availCount} available copy/copies`,
+      };
+    });
 
   const allBookOptions: Option[] = books.map((b) => ({
     id: b._id,
@@ -1183,6 +1247,18 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
                         <div className="flex items-center justify-end gap-1.5">
                           {!isLostOrDamaged && !isReturned && (
                             <>
+                              {/* Return Book Button */}
+                              <button
+                                id={`return-btn-${item._id}`}
+                                type="button"
+                                onClick={() => handleOpenReturnModal(item)}
+                                title="Return book copy back to library inventory"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-semibold rounded-xl text-xs transition-colors shadow-2xs cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Return</span>
+                              </button>
+
                               {/* Reissue Button */}
                               <button
                                 id={`reissue-btn-${item._id}`}
@@ -1194,7 +1270,6 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
                                 <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
                                 <span>Re-Issue</span>
                               </button>
-
                             </>
                           )}
 
@@ -2585,6 +2660,124 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* RETURN BOOK MODAL */}
+      <Modal
+        isOpen={isReturnModalOpen}
+        onClose={() => setIsReturnModalOpen(false)}
+        title="Return Book to Inventory"
+        subtitle={selectedAssignmentForReturn ? `Processing return for "${selectedAssignmentForReturn.book?.title}"` : ''}
+        maxWidth="md"
+      >
+        {selectedAssignmentForReturn && (
+          <form onSubmit={handleReturnSubmit} className="space-y-4">
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                {formError}
+              </div>
+            )}
+
+            {/* Book & Borrower Summary Card */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-semibold">Book Title:</span>
+                <span className="font-bold text-slate-900">{selectedAssignmentForReturn.book?.title}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-semibold">Accession / Serial No:</span>
+                <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                  {selectedAssignmentForReturn.accessionNumber || selectedAssignmentForReturn.book?.accessionNumber || 'ACC-N/A'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-semibold">Borrower Name:</span>
+                <span className="font-bold text-purple-900">{selectedAssignmentForReturn.member?.name} ({selectedAssignmentForReturn.member?.memberId})</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
+                <span className="text-slate-500 font-semibold">Issued Date:</span>
+                <span className="font-medium text-slate-700">{new Date(selectedAssignmentForReturn.assignedDate).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-semibold">Due Date:</span>
+                <span className="font-bold text-purple-800">{new Date(selectedAssignmentForReturn.dueDate).toLocaleDateString()}</span>
+              </div>
+              {(selectedAssignmentForReturn.fineAmount || selectedAssignmentForReturn.currentFine || 0) > 0 && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-rose-100 bg-rose-50/60 p-2 rounded-xl">
+                  <span className="text-rose-800 font-bold flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                    Calculated Overdue Fine:
+                  </span>
+                  <span className="font-mono font-extrabold text-rose-700 text-sm">
+                    ₹{selectedAssignmentForReturn.fineAmount || selectedAssignmentForReturn.currentFine || 0}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Return Date <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="return-date-input"
+                type="date"
+                required
+                value={returnForm.returnDate}
+                onChange={(e) => setReturnForm({ ...returnForm, returnDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-emerald-500"
+              />
+            </div>
+
+            {(selectedAssignmentForReturn.fineAmount || selectedAssignmentForReturn.currentFine || 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <input
+                  id="return-fine-paid-checkbox"
+                  type="checkbox"
+                  checked={returnForm.finePaid}
+                  onChange={(e) => setReturnForm({ ...returnForm, finePaid: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <label htmlFor="return-fine-paid-checkbox" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                  Mark Overdue Fine (₹{selectedAssignmentForReturn.fineAmount || selectedAssignmentForReturn.currentFine || 0}) as Paid
+                </label>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Remarks / Condition Note (Optional)
+              </label>
+              <textarea
+                id="return-remarks-input"
+                rows={2}
+                value={returnForm.remarks}
+                onChange={(e) => setReturnForm({ ...returnForm, remarks: e.target.value })}
+                placeholder="e.g. Returned in good condition"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsReturnModalOpen(false)}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-return-book-btn"
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-white" />
+                <span>{submitting ? 'Returning...' : 'Confirm Return to Inventory'}</span>
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

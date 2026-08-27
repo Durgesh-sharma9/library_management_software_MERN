@@ -68,6 +68,7 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
   const [showAllBooksForMember, setShowAllBooksForMember] = useState<boolean>(false);
+  const [showAllStudentsInModal, setShowAllStudentsInModal] = useState<boolean>(false);
 
   const [reportForm, setReportForm] = useState<{
     bookId: string;
@@ -191,6 +192,7 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
     setSelectedMemberId('');
     setSelectedAssignmentId('');
     setShowAllBooksForMember(false);
+    setShowAllStudentsInModal(false);
     setReportForm({
       bookId: '',
       type: defaultType,
@@ -364,10 +366,19 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
     try {
       setSubmitting(true);
       setFormError('');
+
+      // Find matching active assignment if not explicitly selected
+      const matchingLoan = activeLoans.find(
+        (l) =>
+          (typeof l.member === 'object' ? l.member?._id : l.member) === selectedMemberId &&
+          (typeof l.book === 'object' ? l.book?._id : l.book) === reportForm.bookId
+      );
+      const effAssignmentId = selectedAssignmentId || matchingLoan?._id;
+
       const res = await lostDamagedService.reportDirect({
         bookId: reportForm.bookId,
         memberId: borrowerType !== 'inventory' ? selectedMemberId : undefined,
-        assignmentId: selectedAssignmentId || undefined,
+        assignmentId: effAssignmentId || undefined,
         source: borrowerType !== 'inventory' ? 'assignment' : 'inventory',
         type: reportForm.type,
         resolutionType: reportForm.resolutionType,
@@ -581,15 +592,16 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
           const bObj = typeof loan.book === 'object' ? loan.book : books.find((b) => b._id === loan.book);
           const bId = bObj?._id || (typeof loan.book === 'string' ? loan.book : '');
           const bTitle = bObj?.title || 'Book';
-          const bAcc = bObj?.accessionNumber || 'No Acc#';
+          const particularAcc = loan.accessionNumber || bObj?.accessionNumber || 'No Acc#';
+          const copyNoStr = loan.copyNumber ? ` • Copy #${loan.copyNumber}` : '';
           const bAuthor = bObj?.author || '';
           const issueDateStr = loan.assignedDate ? new Date(loan.assignedDate).toLocaleDateString() : '';
           const dueDateStr = loan.dueDate ? new Date(loan.dueDate).toLocaleDateString() : '';
 
           return {
             value: bId,
-            label: `📖 ${bTitle} (${bAcc}) - ${bAuthor}`,
-            description: `✅ Currently Borrowed | Issued: ${issueDateStr} | Due: ${dueDateStr}`,
+            label: `📖 ${bTitle} [Particular Acc #: ${particularAcc}${copyNoStr}] - ${bAuthor}`,
+            description: `✅ Issued Copy: ${particularAcc}${copyNoStr} | Issued: ${issueDateStr} | Due: ${dueDateStr}`,
           };
         });
       }
@@ -603,29 +615,46 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
     }));
   }, [books, borrowerType, selectedMemberId, memberActiveLoans, showAllBooksForMember]);
 
+  const activeMemberIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    activeLoans.forEach((loan) => {
+      const mId = typeof loan.member === 'object' ? loan.member?._id : loan.member;
+      if (mId) ids.add(String(mId));
+    });
+    return ids;
+  }, [activeLoans]);
+
   const studentOptions: Option[] = React.useMemo(() => {
-    return members
-      .filter((m) => m.memberType === 'student' || !m.memberType)
-      .map((m) => {
-        const cls = formatClassName(m.className);
-        const classSectionStr = cls ? (m.section ? `${cls}-${m.section}` : cls) : 'Student';
-        return {
-          value: m._id,
-          label: `${m.name} - ${classSectionStr} (${m.memberId})`,
-          description: `Adm No: ${m.admissionNo || 'N/A'} • WhatsApp/Phone: ${m.whatsapp || 'N/A'}`,
-        };
-      });
-  }, [members]);
+    let filtered = members.filter((m) => m.memberType === 'student' || !m.memberType);
+    if (!showAllStudentsInModal) {
+      filtered = filtered.filter((m) => activeMemberIds.has(String(m._id)));
+    }
+    return filtered.map((m) => {
+      const cls = formatClassName(m.className);
+      const classSectionStr = cls ? (m.section ? `${cls}-${m.section}` : cls) : 'Student';
+      const loanCount = activeLoans.filter((l) => (typeof l.member === 'object' ? l.member?._id : l.member) === m._id).length;
+      return {
+        value: m._id,
+        label: `${m.name} - ${classSectionStr} (${m.memberId})`,
+        description: `${loanCount > 0 ? `📚 ${loanCount} Book(s) Issued • ` : ''}Adm No: ${m.admissionNo || 'N/A'} • Phone: ${m.whatsapp || 'N/A'}`,
+      };
+    });
+  }, [members, activeMemberIds, activeLoans, showAllStudentsInModal]);
 
   const teacherOptions: Option[] = React.useMemo(() => {
-    return members
-      .filter((m) => m.memberType === 'teacher')
-      .map((m) => ({
+    let filtered = members.filter((m) => m.memberType === 'teacher');
+    if (!showAllStudentsInModal) {
+      filtered = filtered.filter((m) => activeMemberIds.has(String(m._id)));
+    }
+    return filtered.map((m) => {
+      const loanCount = activeLoans.filter((l) => (typeof l.member === 'object' ? l.member?._id : l.member) === m._id).length;
+      return {
         value: m._id,
         label: `${m.name} - ${m.department || m.designation || 'Teacher'} (${m.memberId})`,
-        description: `Phone: ${m.whatsapp || 'N/A'}`,
-      }));
-  }, [members]);
+        description: `${loanCount > 0 ? `📚 ${loanCount} Book(s) Issued • ` : ''}Phone: ${m.whatsapp || 'N/A'}`,
+      };
+    });
+  }, [members, activeMemberIds, activeLoans, showAllStudentsInModal]);
 
   const allMemberOptions: Option[] = [
     { value: '', label: '🏢 No Student / Direct Shelf Inventory (Catalog Audit)' },
@@ -1143,15 +1172,6 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDeleteModal(log)}
-                            className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                            title="Delete / Restore copy to stock"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1282,16 +1302,48 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
             {/* Student Search Dropdown */}
             {borrowerType === 'student' && (
               <div className="space-y-2 pt-1">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Search & Select Student <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Search & Select Student <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllStudentsInModal(!showAllStudentsInModal)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                  >
+                    {showAllStudentsInModal ? 'Show Only Active Borrowers' : 'Show All Students in School'}
+                  </button>
+                </div>
+
+                {!showAllStudentsInModal && (
+                  <div className="p-2 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-900 text-[11px] flex items-center justify-between font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      Showing only students with currently issued books ({studentOptions.length}).
+                    </span>
+                    {studentOptions.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllStudentsInModal(true)}
+                        className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                      >
+                        Show All Students
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <SearchableSelect
                   id="select-student-lost"
                   options={studentOptions}
                   value={selectedMemberId}
                   onChange={handleMemberSelect}
-                  placeholder="Type student name, class, roll number, admission number, or STU ID..."
-                  emptyMessage="No student found matching your search."
+                  placeholder={
+                    studentOptions.length === 0
+                      ? 'No active borrowing students found. Click "Show All Students" above.'
+                      : 'Type student name, class, roll number, admission number, or STU ID...'
+                  }
+                  emptyMessage="No student found with active borrowed books."
                 />
 
                 {/* Selected Student Card */}
@@ -1328,7 +1380,8 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                         <div className="flex flex-wrap gap-1.5">
                           {memberActiveLoans.map((loan) => {
                             const bTitle = typeof loan.book === 'object' ? loan.book?.title : 'Book';
-                            const bAcc = typeof loan.book === 'object' ? loan.book?.accessionNumber : '';
+                            const particularAcc = loan.accessionNumber || (typeof loan.book === 'object' ? loan.book?.accessionNumber : '');
+                            const copyNoStr = loan.copyNumber ? `Copy #${loan.copyNumber}` : '';
                             const isSelected = selectedAssignmentId === loan._id;
 
                             return (
@@ -1336,15 +1389,17 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                                 key={loan._id}
                                 type="button"
                                 onClick={() => handleSelectMemberLoan(loan)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
                                   isSelected
-                                    ? 'bg-amber-100 border-amber-400 text-amber-900 ring-1 ring-amber-400'
+                                    ? 'bg-amber-100 border-amber-400 text-amber-950 ring-2 ring-amber-400 shadow-2xs font-bold'
                                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                                 }`}
                               >
-                                <BookOpen className="w-3 h-3 text-amber-700" />
+                                <BookOpen className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                                 <span>{bTitle}</span>
-                                {bAcc && <span className="font-mono text-[10px] opacity-75">({bAcc})</span>}
+                                <span className="font-mono text-[10px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded">
+                                  {particularAcc} {copyNoStr && `(${copyNoStr})`}
+                                </span>
                               </button>
                             );
                           })}
@@ -1363,16 +1418,44 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
             {/* Teacher Search Dropdown */}
             {borrowerType === 'teacher' && (
               <div className="space-y-2 pt-1">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Search & Select Teacher / Faculty <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Search & Select Teacher / Faculty <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllStudentsInModal(!showAllStudentsInModal)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                  >
+                    {showAllStudentsInModal ? 'Show Only Active Borrowers' : 'Show All Teachers'}
+                  </button>
+                </div>
+
+                {!showAllStudentsInModal && (
+                  <div className="p-2 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-900 text-[11px] flex items-center justify-between font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      Showing only teachers with currently issued books ({teacherOptions.length}).
+                    </span>
+                    {teacherOptions.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllStudentsInModal(true)}
+                        className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                      >
+                        Show All Teachers
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <SearchableSelect
                   id="select-teacher-lost"
                   options={teacherOptions}
                   value={selectedMemberId}
                   onChange={handleMemberSelect}
                   placeholder="Type teacher name, staff ID, or department..."
-                  emptyMessage="No teacher found."
+                  emptyMessage="No teacher found with active borrowed books."
                 />
 
                 {selectedMember && (
@@ -1389,7 +1472,8 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                         <div className="flex flex-wrap gap-1.5">
                           {memberActiveLoans.map((loan) => {
                             const bTitle = typeof loan.book === 'object' ? loan.book?.title : 'Book';
-                            const bAcc = typeof loan.book === 'object' ? loan.book?.accessionNumber : '';
+                            const particularAcc = loan.accessionNumber || (typeof loan.book === 'object' ? loan.book?.accessionNumber : '');
+                            const copyNoStr = loan.copyNumber ? `Copy #${loan.copyNumber}` : '';
                             const isSelected = selectedAssignmentId === loan._id;
 
                             return (
@@ -1397,15 +1481,17 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                                 key={loan._id}
                                 type="button"
                                 onClick={() => handleSelectMemberLoan(loan)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
                                   isSelected
-                                    ? 'bg-amber-100 border-amber-400 text-amber-900 ring-1 ring-amber-400'
+                                    ? 'bg-amber-100 border-amber-400 text-amber-950 ring-2 ring-amber-400 shadow-2xs font-bold'
                                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                                 }`}
                               >
-                                <BookOpen className="w-3 h-3 text-amber-700" />
+                                <BookOpen className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                                 <span>{bTitle}</span>
-                                {bAcc && <span className="font-mono text-[10px] opacity-75">({bAcc})</span>}
+                                <span className="font-mono text-[10px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded">
+                                  {particularAcc} {copyNoStr && `(${copyNoStr})`}
+                                </span>
                               </button>
                             );
                           })}
@@ -1498,32 +1584,36 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
                   <BookOpen className="w-4 h-4 text-blue-600" />
                   <span>{selectedBookObj.title}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {selectedBookObj.price ? (
                     <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
                       MRP: ₹{selectedBookObj.price}
                     </span>
                   ) : null}
-                  <span className="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
-                    Acc: {selectedBookObj.accessionNumber || 'N/A'}
-                  </span>
+                  {selectedLoanObj && selectedLoanObj.accessionNumber ? (
+                    <span className="font-mono font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded border border-purple-300 text-[11px]">
+                      Issued Copy Acc #: {selectedLoanObj.accessionNumber} {selectedLoanObj.copyNumber ? `(Copy #${selectedLoanObj.copyNumber})` : ''}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                      Acc Range: {selectedBookObj.accessionNumber || 'N/A'}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between text-slate-600 text-[11px] pt-1 border-t border-slate-200">
                 <span>Author: <strong>{selectedBookObj.author}</strong></span>
                 <span>Total Copies: <strong>{selectedBookObj.totalCopies}</strong> • In Stock: <strong className="text-emerald-700">{selectedBookObj.availableCopies}</strong></span>
               </div>
-              {selectedAssignmentId && (
-                <div className="pt-1 text-[11px] text-blue-700 font-medium flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-blue-600" />
-                    Linked to active issue record
+              {selectedAssignmentId && selectedLoanObj && (
+                <div className="pt-1.5 border-t border-blue-100 text-[11px] text-blue-900 font-semibold flex items-center justify-between bg-blue-50/70 p-2 rounded-lg">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-600" />
+                    <span>Linked Active Loan: <strong>{selectedLoanObj.accessionNumber || selectedBookObj.accessionNumber}</strong> {selectedLoanObj.copyNumber ? `(Copy #${selectedLoanObj.copyNumber})` : ''}</span>
                   </span>
-                  {selectedLoanObj && (
-                    <span className="text-slate-500">
-                      Due: {new Date(selectedLoanObj.dueDate).toLocaleDateString()}
-                    </span>
-                  )}
+                  <span className="text-slate-600 text-[10px]">
+                    Issued Date: {selectedLoanObj.assignedDate ? new Date(selectedLoanObj.assignedDate).toLocaleDateString() : 'N/A'}
+                  </span>
                 </div>
               )}
             </div>

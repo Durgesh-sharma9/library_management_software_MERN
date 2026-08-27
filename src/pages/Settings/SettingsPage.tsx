@@ -39,6 +39,7 @@ import {
   SlidersHorizontal,
   BookMarked,
   Hash,
+  ChevronRight,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { categoryService, settingService } from '../../services/api';
@@ -53,7 +54,7 @@ interface SettingsPageProps {
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => {
   const { settings, updateSettings, refreshSettings } = useSettings();
-  const [activeTab, setActiveTab] = useState<'general' | 'categories'>('general');
+  const [activeTab, setActiveTab] = useState<'profile' | 'accession' | 'lending' | 'categories'>('profile');
   const [seedingData, setSeedingData] = useState<boolean>(false);
 
   const getTodayStr = () => {
@@ -108,6 +109,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
 
   // Fine Rule Schedule Modal State
   const [isAddFineRuleModalOpen, setIsAddFineRuleModalOpen] = useState<boolean>(false);
+  const [fineRulePage, setFineRulePage] = useState<number>(1);
   const [newFineRuleForm, setNewFineRuleForm] = useState<{
     effectiveDate: string;
     finePerDay: number;
@@ -166,9 +168,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
 
   useEffect(() => {
     if (settings) {
-      const effDate = settings.fineEffectiveDate
+      const todayStr = getTodayStr();
+      const rawDate = settings.fineEffectiveDate
         ? new Date(settings.fineEffectiveDate).toISOString().split('T')[0]
-        : getTodayStr();
+        : todayStr;
+      const effDate = rawDate < todayStr ? todayStr : rawDate;
 
       const startNumStr =
         settings.accessionPadding && settings.accessionStartNumber !== undefined
@@ -663,126 +667,228 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
         </div>
       )}
 
-      {/* Tabs Header */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Library Control & Configuration</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage fine policies, borrowing limits, school branding and Book Category Master with Sub-Categories
-          </p>
-        </div>
-
-        {/* Tab Buttons */}
-        <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
-          <button
-            id="tab-general-settings"
-            type="button"
-            onClick={() => setActiveTab('general')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'general'
-                ? 'bg-blue-600 text-white shadow-xs shadow-blue-600/20'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>General Rules & Policies</span>
-          </button>
-
-          <button
-            id="tab-category-master"
-            type="button"
-            onClick={() => setActiveTab('categories')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'categories'
-                ? 'bg-blue-600 text-white shadow-xs shadow-blue-600/20'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Book Categories & Sub-Categories</span>
-          </button>
-        </div>
-      </div>
-
-      {/* GENERAL RULES TAB */}
-      {activeTab === 'general' && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
-          <form onSubmit={handleGeneralSubmit} className="space-y-6">
-            {formError && (
-              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
-                  <div>
-                    <span className="font-bold">Configuration Alert:</span> {formError}
-                  </div>
-                </div>
-                {limitViolationData && limitViolationData.violatingMembers.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setIsLimitViolationModalOpen(true)}
-                    className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold shrink-0 hover:bg-rose-700 cursor-pointer flex items-center gap-1"
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>View {limitViolationData.violatingMembers.length} Over-Limit Members</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* School & Library Branding */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <Building className="w-4 h-4 text-blue-600" />
-                <span>School & Library Identity</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Library Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="settings-library-name"
-                    type="text"
-                    required
-                    value={generalForm.libraryName}
-                    onChange={(e) =>
-                      setGeneralForm({ ...generalForm, libraryName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    School / Institute Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="settings-school-name"
-                    type="text"
-                    required
-                    value={generalForm.schoolName}
-                    onChange={(e) =>
-                      setGeneralForm({ ...generalForm, schoolName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Displayed across the application sidebar, slips, and receipts
-                  </p>
-                </div>
-              </div>
+      {/* Modern 2-Column Settings Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* LEFT VERTICAL NAVIGATION PANEL */}
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-xs space-y-1.5">
+            <div className="px-3 py-2 border-b border-slate-100 mb-1">
+              <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <Settings className="w-4 h-4 text-indigo-600" />
+                <span>System Configuration</span>
+              </h2>
+              <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Control library settings & category master</p>
             </div>
 
-            {/* Accession Number & Book Serial Configuration */}
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {/* 1. School Profile Nav Item */}
+            <button
+              id="tab-profile-settings"
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-950 border border-blue-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl transition-colors ${activeTab === 'profile' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  <Building className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block leading-tight text-slate-900">School Profile</span>
+                  <span className="text-[10px] text-slate-400 block font-semibold truncate mt-0.5">School name, phone, email & currency</span>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'profile' ? 'text-blue-600 translate-x-0.5' : 'text-slate-300'}`} />
+            </button>
+
+            {/* 2. Accession Number Nav Item */}
+            <button
+              id="tab-accession-settings"
+              type="button"
+              onClick={() => setActiveTab('accession')}
+              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
+                activeTab === 'accession'
+                  ? 'bg-gradient-to-r from-purple-50 to-pink-50/50 text-purple-950 border border-purple-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl transition-colors ${activeTab === 'accession' ? 'bg-purple-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  <BookMarked className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block leading-tight text-slate-900">Accession Format</span>
+                  <span className="text-[10px] text-slate-400 block font-semibold truncate mt-0.5">Prefix code, separator & starting #</span>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'accession' ? 'text-purple-600 translate-x-0.5' : 'text-slate-300'}`} />
+            </button>
+
+            {/* 3. Lending & Fines Nav Item */}
+            <button
+              id="tab-lending-settings"
+              type="button"
+              onClick={() => setActiveTab('lending')}
+              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
+                activeTab === 'lending'
+                  ? 'bg-gradient-to-r from-emerald-50 to-teal-50/50 text-emerald-950 border border-emerald-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl transition-colors ${activeTab === 'lending' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block leading-tight text-slate-900">Lending & Fines</span>
+                  <span className="text-[10px] text-slate-400 block font-semibold truncate mt-0.5">Max books limit, due days & fine rates</span>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'lending' ? 'text-emerald-600 translate-x-0.5' : 'text-slate-300'}`} />
+            </button>
+
+            {/* 4. Book Categories Nav Item */}
+            <button
+              id="tab-category-master"
+              type="button"
+              onClick={() => setActiveTab('categories')}
+              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
+                activeTab === 'categories'
+                  ? 'bg-gradient-to-r from-amber-50 to-orange-50/50 text-amber-950 border border-amber-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl transition-colors ${activeTab === 'categories' ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block leading-tight text-slate-900">Book Categories</span>
+                  <span className="text-[10px] text-slate-400 block font-semibold truncate mt-0.5">Categories & Sub-Categories master</span>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'categories' ? 'text-amber-600 translate-x-0.5' : 'text-slate-300'}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT FOCUSED CONTENT PANEL */}
+        <div className="lg:col-span-8">
+          {/* TAB 1: SCHOOL & CAMPUS PROFILE */}
+          {activeTab === 'profile' && (
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <BookMarked className="w-4 h-4 text-purple-600" />
-                  <span>Accession Number & Serial Configuration</span>
+                  <Building className="w-4 h-4 text-blue-600" />
+                  <span>School & Library Identity Profile</span>
                 </h3>
-                <div className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-xl border border-purple-200">
-                  <span className="text-[11px] font-bold text-slate-500">Live Preview:</span>
-                  <span className="text-xs font-mono font-black text-purple-700 bg-white px-2 py-0.5 rounded border border-purple-200">
+                <span className="text-[11px] text-slate-400 font-medium">Basic campus & contact information</span>
+              </div>
+
+              <form onSubmit={handleGeneralSubmit} className="space-y-5">
+                {formError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      School / Institute Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="settings-school-name"
+                      type="text"
+                      required
+                      value={generalForm.schoolName}
+                      onChange={(e) => setGeneralForm({ ...generalForm, schoolName: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-semibold"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Displayed across sidebar, slips, and receipts</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Library Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="settings-library-name"
+                      type="text"
+                      required
+                      value={generalForm.libraryName}
+                      onChange={(e) => setGeneralForm({ ...generalForm, libraryName: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-semibold"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Official name of the central library</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Library Helpdesk Email</label>
+                    <input
+                      type="email"
+                      value={generalForm.contactEmail}
+                      onChange={(e) => setGeneralForm({ ...generalForm, contactEmail: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Library Contact Phone</label>
+                    <input
+                      type="text"
+                      value={generalForm.contactPhone}
+                      onChange={(e) => setGeneralForm({ ...generalForm, contactPhone: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Currency Symbol</label>
+                    <input
+                      type="text"
+                      value={generalForm.currency}
+                      onChange={(e) => setGeneralForm({ ...generalForm, currency: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-bold text-indigo-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    id="save-profile-settings-btn"
+                    type="submit"
+                    disabled={savingSettings}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{savingSettings ? 'Saving...' : 'Save School Profile'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 2: ACCESSION NUMBER FORMAT */}
+          {activeTab === 'accession' && (
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <BookMarked className="w-4 h-4 text-purple-600" />
+                    <span>Accession Number & Serial Configuration</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Customize automatic book accession codes generated upon adding books</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-purple-50 px-3.5 py-1.5 rounded-xl border border-purple-200">
+                  <span className="text-[11px] font-bold text-slate-500">Live Code Preview:</span>
+                  <span className="text-xs font-mono font-black text-purple-700 bg-white px-2.5 py-0.5 rounded border border-purple-200 shadow-2xs">
                     {((generalForm.accessionPrefix || 'ACC').trim().toUpperCase()) +
                       (generalForm.accessionSeparator !== undefined ? generalForm.accessionSeparator : '-') +
                       (generalForm.accessionStartNumber !== '' ? generalForm.accessionStartNumber : '0')}
@@ -790,568 +896,447 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
-                {/* Prefix */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Accession Prefix <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="settings-accession-prefix"
-                    type="text"
-                    required
-                    placeholder="e.g. ACC, PCC"
-                    value={generalForm.accessionPrefix}
-                    onChange={(e) =>
-                      setGeneralForm({
-                        ...generalForm,
-                        accessionPrefix: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold uppercase text-purple-900 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-100 bg-white"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Prefix code (e.g. ACC, PCC, LIB)
-                  </p>
-                </div>
-
-                {/* Separator / Delimiter */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Separator / Delimiter
-                  </label>
-                  <select
-                    id="settings-accession-separator"
-                    value={generalForm.accessionSeparator !== undefined ? generalForm.accessionSeparator : '-'}
-                    onChange={(e) =>
-                      setGeneralForm({
-                        ...generalForm,
-                        accessionSeparator: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-purple-500 bg-white"
-                  >
-                    <option value="-">Hyphen (-) e.g. {generalForm.accessionPrefix || 'PCC'}-0001</option>
-                    <option value="/">Slash (/) e.g. {generalForm.accessionPrefix || 'PCC'}/0001</option>
-                    <option value="_">Underscore (_) e.g. {generalForm.accessionPrefix || 'PCC'}_0001</option>
-                    <option value="">None e.g. {generalForm.accessionPrefix || 'PCC'}0001</option>
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Symbol between prefix & serial
-                  </p>
-                </div>
-
-                {/* Starting Number */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Starting Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="settings-accession-start-number"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="01"
-                    value={generalForm.accessionStartNumber}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setGeneralForm({
-                        ...generalForm,
-                        accessionStartNumber: val,
-                        accessionPadding: Math.max(1, val.length),
-                      });
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-100 bg-white"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Format: {generalForm.accessionStartNumber || '0'} ({Math.max(1, String(generalForm.accessionStartNumber || '0').length)} digits)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Circulation & Lending Policies */}
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Circulation Limits & Lending Policies</span>
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Max Book Limit per member */}
-                <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-xl flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-blue-900">
-                        Maximum Books Limit per Member <span className="text-rose-500">*</span>
-                      </label>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
-                        Current: {settings?.maxBooksPerMember ?? 3}
-                      </span>
-                    </div>
-                    <input
-                      id="settings-max-books"
-                      type="number"
-                      min="1"
-                      max="50"
-                      required
-                      value={generalForm.maxBooksPerMember}
-                      onChange={(e) =>
-                        setGeneralForm({
-                          ...generalForm,
-                          maxBooksPerMember: parseInt(e.target.value, 10) || 1,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-blue-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-[10px] text-blue-700 mt-1.5 font-medium leading-relaxed">
-                      Strictly limits how many active unreturned books a member can have assigned simultaneously.
-                    </p>
+              <form onSubmit={handleGeneralSubmit} className="space-y-5">
+                {formError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{formError}</span>
                   </div>
+                )}
 
-                  {isLimitReduced && (
-                    <div className="mt-2.5 pt-2 border-t border-blue-200/60">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-amber-700 font-semibold flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Reducing limit to {generalForm.maxBooksPerMember}</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleManualCheckLimit}
-                          disabled={isCheckingLimit}
-                          className="text-blue-700 hover:text-blue-900 underline font-bold cursor-pointer"
-                        >
-                          {isCheckingLimit ? 'Verifying...' : 'Check Borrowers'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Issue duration */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Default Issue Duration (Days) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      id="settings-issue-duration"
-                      type="number"
-                      min="1"
-                      required
-                      value={generalForm.issueDuration}
-                      onChange={(e) =>
-                        setGeneralForm({
-                          ...generalForm,
-                          issueDuration: parseInt(e.target.value, 10) || 1,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-semibold"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1.5">
-                      Auto-calculates standard due date when issuing books
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* DATE-TIERED FINE CONFIGURATION CARD */}
-              <div className="p-4 bg-gradient-to-br from-rose-50/40 via-amber-50/30 to-orange-50/40 border border-amber-200/80 rounded-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                      ₹
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>Date-Tiered Late Fine Rates (Active & Effective Dates)</span>
-                        <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.2 rounded">
-                          Live Slabs
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500">
-                        Overdue fine is calculated proportionally by date ranges (e.g. ₹2/day before 1 Aug, ₹5/day from 1 Aug).
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleLoadUserExampleScenario}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 rounded-xl text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
-                      title="Load example: ₹2/day before 1st, ₹5/day from 1st onwards"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Test Preset (₹2 → ₹5 on 1st)</span>
-                    </button>
-
-                    <button
-                      id="add-fine-rule-btn"
-                      type="button"
-                      onClick={handleOpenAddFineRule}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Schedule New Rate</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Primary Active Fine Input + Effective From Date */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white rounded-xl border border-amber-200/60 shadow-2xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                  {/* Prefix */}
                   <div>
                     <label className="block text-xs font-bold text-slate-800 mb-1">
-                      Current Default Fine Rate (₹ per Day) <span className="text-rose-500">*</span>
+                      Accession Prefix <span className="text-rose-500">*</span>
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-slate-400 font-bold text-xs">₹</span>
+                    <input
+                      id="settings-accession-prefix"
+                      type="text"
+                      required
+                      placeholder="e.g. ACC, PCC"
+                      value={generalForm.accessionPrefix}
+                      onChange={(e) =>
+                        setGeneralForm({
+                          ...generalForm,
+                          accessionPrefix: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold uppercase text-purple-900 focus:outline-hidden focus:border-purple-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Prefix code (e.g. ACC, PCC, LIB)</p>
+                  </div>
+
+                  {/* Separator / Delimiter */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      Separator / Delimiter
+                    </label>
+                    <select
+                      id="settings-accession-separator"
+                      value={generalForm.accessionSeparator !== undefined ? generalForm.accessionSeparator : '-'}
+                      onChange={(e) =>
+                        setGeneralForm({
+                          ...generalForm,
+                          accessionSeparator: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-purple-500 bg-white"
+                    >
+                      <option value="-">Hyphen (-) e.g. {generalForm.accessionPrefix || 'ACC'}-0001</option>
+                      <option value="/">Slash (/) e.g. {generalForm.accessionPrefix || 'ACC'}/0001</option>
+                      <option value="_">Underscore (_) e.g. {generalForm.accessionPrefix || 'ACC'}_0001</option>
+                      <option value="">None e.g. {generalForm.accessionPrefix || 'ACC'}0001</option>
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1">Symbol between prefix & serial</p>
+                  </div>
+
+                  {/* Starting Number */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      Starting Serial Number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="settings-accession-start-number"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0001"
+                      value={generalForm.accessionStartNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setGeneralForm({
+                          ...generalForm,
+                          accessionStartNumber: val,
+                          accessionPadding: Math.max(1, val.length),
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-hidden focus:border-purple-500 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Format: {generalForm.accessionStartNumber || '0'} ({Math.max(1, String(generalForm.accessionStartNumber || '0').length)} digits)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    id="save-accession-settings-btn"
+                    type="submit"
+                    disabled={savingSettings}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{savingSettings ? 'Saving...' : 'Save Accession Format'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 3: LENDING RULES & FINE RATES */}
+          {activeTab === 'lending' && (
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Circulation Limits, Lending Policies & Late Fine Rates</span>
+                </h3>
+                <span className="text-[11px] text-slate-400 font-medium">Set book borrowing quotas & fine slabs</span>
+              </div>
+
+              <form onSubmit={handleGeneralSubmit} className="space-y-6">
+                {formError && (
+                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-bold">Policy Alert:</span> {formError}
+                      </div>
+                    </div>
+                    {limitViolationData && limitViolationData.violatingMembers.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsLimitViolationModalOpen(true)}
+                        className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold shrink-0 hover:bg-rose-700 cursor-pointer flex items-center gap-1"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>View {limitViolationData.violatingMembers.length} Over-Limit Members</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Limits & Durations Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Max Book Limit */}
+                  <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-blue-900">
+                          Maximum Books Limit per Member <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                          Current: {settings?.maxBooksPerMember ?? 3}
+                        </span>
+                      </div>
                       <input
-                        id="settings-fine-per-day"
+                        id="settings-max-books"
                         type="number"
-                        min="0"
-                        step="0.5"
+                        min="1"
+                        max="50"
                         required
-                        value={generalForm.finePerDay}
+                        value={generalForm.maxBooksPerMember}
                         onChange={(e) =>
                           setGeneralForm({
                             ...generalForm,
-                            finePerDay: parseFloat(e.target.value) || 0,
+                            maxBooksPerMember: parseInt(e.target.value, 10) || 1,
                           })
                         }
-                        className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-rose-500 font-bold text-rose-700"
+                        className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-blue-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-[10px] text-blue-700 mt-1.5 font-medium leading-relaxed">
+                        Strictly limits how many active unreturned books a member can have assigned simultaneously.
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Base rate applied when no custom schedule applies
-                    </p>
+
+                    {isLimitReduced && (
+                      <div className="mt-2.5 pt-2 border-t border-blue-200/60">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-amber-700 font-semibold flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reducing limit to {generalForm.maxBooksPerMember}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleManualCheckLimit}
+                            disabled={isCheckingLimit}
+                            className="text-blue-700 hover:text-blue-900 underline font-bold cursor-pointer"
+                          >
+                            {isCheckingLimit ? 'Verifying...' : 'Check Borrowers'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
-                      <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Effective From Date</span>
-                    </label>
-                    <input
-                      id="settings-fine-effective-date"
-                      type="date"
-                      value={generalForm.fineEffectiveDate}
-                      onChange={(e) =>
-                        setGeneralForm({
-                          ...generalForm,
-                          fineEffectiveDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-medium text-slate-800"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Date from which new fine rate applies to overdue days
-                    </p>
+                  {/* Issue Duration */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Default Issue Duration (Days) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        id="settings-issue-duration"
+                        type="number"
+                        min="1"
+                        required
+                        value={generalForm.issueDuration}
+                        onChange={(e) =>
+                          setGeneralForm({
+                            ...generalForm,
+                            issueDuration: parseInt(e.target.value, 10) || 1,
+                          })
+                        }
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500 font-bold"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        Auto-calculates standard due date when issuing books
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* SCHEDULED FINE RULES TABLE */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                    <span className="flex items-center gap-1.5">
-                      <History className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Effective Fine Rate Schedule & Slabs History</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500 font-normal">
-                      {generalForm.fineRules.length} scheduled rate slab(s)
-                    </span>
-                  </div>
+                {/* DATE-TIERED FINE CONFIGURATION CARD */}
+                <div className="p-4 bg-gradient-to-br from-rose-50/40 via-amber-50/30 to-orange-50/40 border border-amber-200/80 rounded-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                        ₹
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <span>Date-Tiered Late Fine Rates</span>
+                          <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.2 rounded">
+                            Live Slabs
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Overdue fine is calculated proportionally by date ranges (e.g. ₹2/day before 1 Aug, ₹5/day from 1 Aug).
+                        </p>
+                      </div>
+                    </div>
 
-                  {generalForm.fineRules.length === 0 ? (
-                    <div className="p-3 bg-white/80 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
-                      <span>No custom date slabs added yet. Fine will be charged uniformly at ₹{generalForm.finePerDay}/day. Click </span>
+                    <div className="flex items-center gap-2">
                       <button
+                        id="add-fine-rule-btn"
                         type="button"
                         onClick={handleOpenAddFineRule}
-                        className="text-rose-600 font-bold underline hover:text-rose-700 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
                       >
-                        Schedule New Rate
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Schedule New Rate</span>
                       </button>
-                      <span> to add an effective-date slab (e.g. ₹5/day starting from 1st Aug).</span>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] font-bold">
-                            <th className="py-2.5 px-3">Effective Date</th>
-                            <th className="py-2.5 px-3">Fine Rate / Day</th>
-                            <th className="py-2.5 px-3">Status</th>
-                            <th className="py-2.5 px-3">Note / Reason</th>
-                            <th className="py-2.5 px-3 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {generalForm.fineRules.map((rule, idx) => {
-                            const ruleDate = new Date(rule.effectiveDate);
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const isFuture = ruleDate.getTime() > today.getTime();
-                            const isPastOrToday = !isFuture;
-
-                            return (
-                              <tr key={idx} className="hover:bg-slate-50/60">
-                                <td className="py-2.5 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
-                                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                                  <span>{new Date(rule.effectiveDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                                </td>
-                                <td className="py-2.5 px-3 font-bold text-rose-700">
-                                  ₹{rule.finePerDay} <span className="text-[10px] font-normal text-slate-400">/ day</span>
-                                </td>
-                                <td className="py-2.5 px-3">
-                                  {isFuture ? (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
-                                      Upcoming
-                                    </span>
-                                  ) : idx === generalForm.fineRules.length - 1 ? (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                      Active Now
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                      Historical
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="py-2.5 px-3 text-slate-600 text-[11px]">
-                                  {rule.note || <span className="text-slate-400 italic">—</span>}
-                                </td>
-                                <td className="py-2.5 px-3 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteFineRule(idx)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                    title="Delete rule"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* LIVE FINE CALCULATION SIMULATOR & BREAKDOWN TESTER */}
-                <div className="p-3.5 bg-white rounded-xl border border-blue-200/80 shadow-2xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-blue-950">
-                      <Calculator className="w-4 h-4 text-blue-600" />
-                      <span>Interactive Fine Calculation Simulator</span>
-                    </div>
-                    <span className="text-[10px] text-blue-700 bg-blue-50 font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                      Live Verification Tool
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Test Due Date:
-                      </label>
-                      <input
-                        type="date"
-                        value={simDueDate}
-                        onChange={(e) => setSimDueDate(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Test Return / Calculation Date:
-                      </label>
-                      <input
-                        type="date"
-                        value={simTargetDate}
-                        onChange={(e) => setSimTargetDate(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium"
-                      />
                     </div>
                   </div>
 
-                  {/* Simulator Breakdown Output */}
-                  {simResult && (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-700">
-                          Total Overdue: <strong className="text-slate-900">{simResult.lateDays} Days</strong>
-                        </span>
-                        <span className="font-extrabold text-rose-700 text-sm">
-                          Total Fine: ₹{simResult.fineAmount}
-                        </span>
+                  {/* Primary Active Fine Input + Effective From Date */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white rounded-xl border border-amber-200/60 shadow-2xs">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                        <span>Current Default Fine Rate (₹ per Day) <span className="text-rose-500">*</span></span>
+                        <span className="text-[10px] text-slate-400 font-normal">(Read-only)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2 text-slate-400 font-bold text-xs">₹</span>
+                        <input
+                          id="settings-fine-per-day"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          readOnly
+                          disabled
+                          value={generalForm.finePerDay}
+                          className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-rose-700 bg-slate-100/80 cursor-not-allowed"
+                        />
                       </div>
-
-                      {simResult.breakdown && simResult.breakdown.length > 0 ? (
-                        <div className="space-y-1.5 pt-1 border-t border-slate-200/80">
-                          <div className="text-[11px] font-bold text-slate-700">Detailed Slabs Breakdown:</div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {simResult.breakdown.map((b: any, bIdx: number) => (
-                              <div
-                                key={bIdx}
-                                className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between text-[11px]"
-                              >
-                                <div>
-                                  <span className="font-semibold text-slate-800">
-                                    {new Date(b.fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} – {new Date(b.toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                  </span>
-                                  <span className="text-slate-500 block text-[10px]">
-                                    {b.days} day(s) @ ₹{b.ratePerDay}/day
-                                  </span>
-                                </div>
-                                <span className="font-bold text-rose-600 text-xs">
-                                  ₹{b.amount}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-emerald-700 font-medium">
-                          No overdue days! The book is returned within the due date.
-                        </div>
-                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">Current active default fine rate</p>
                     </div>
-                  )}
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                        <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Effective From Date</span>
+                        <span className="text-[10px] text-slate-400 font-normal ml-auto">(Read-only)</span>
+                      </label>
+                      <input
+                        id="settings-fine-effective-date"
+                        type="date"
+                        readOnly
+                        disabled
+                        value={generalForm.fineEffectiveDate}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 bg-slate-100/80 cursor-not-allowed"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Current fine rate effective start date</p>
+                    </div>
+                  </div>
+
+                  {/* SCHEDULED FINE RULES TABLE */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                      <span className="flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Effective Fine Rate Schedule & Slabs History</span>
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-normal">
+                        {generalForm.fineRules.length} scheduled rate slab(s)
+                      </span>
+                    </div>
+
+                    {generalForm.fineRules.length === 0 ? (
+                      <div className="p-3 bg-white/80 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
+                        <span>No custom date slabs added yet. Fine will be charged uniformly at ₹{generalForm.finePerDay}/day. Click </span>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddFineRule}
+                          className="text-rose-600 font-bold underline hover:text-rose-700 cursor-pointer"
+                        >
+                          Schedule New Rate
+                        </button>
+                        <span> to add an effective-date slab (e.g. ₹5/day starting from 1st Aug).</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-2xs">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] font-bold">
+                                <th className="py-2.5 px-3">Effective Date</th>
+                                <th className="py-2.5 px-3">Fine Rate / Day</th>
+                                <th className="py-2.5 px-3">Status</th>
+                                <th className="py-2.5 px-3">Note / Reason</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {generalForm.fineRules
+                                .slice((fineRulePage - 1) * 5, fineRulePage * 5)
+                                .map((rule, idx) => {
+                                  const ruleDate = new Date(rule.effectiveDate);
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const isFuture = ruleDate.getTime() > today.getTime();
+
+                                  return (
+                                    <tr key={idx} className="hover:bg-slate-50/60">
+                                      <td className="py-2.5 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
+                                        <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                        <span>{new Date(rule.effectiveDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                      </td>
+                                      <td className="py-2.5 px-3 font-bold text-rose-700">
+                                        ₹{rule.finePerDay} <span className="text-[10px] font-normal text-slate-400">/ day</span>
+                                      </td>
+                                      <td className="py-2.5 px-3">
+                                        {isFuture ? (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                                            Upcoming
+                                          </span>
+                                        ) : idx === generalForm.fineRules.length - 1 ? (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                            Active Now
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                            Historical
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                        {rule.note || <span className="text-slate-400 italic">—</span>}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Pagination for Slabs Table (Max 5 per page) */}
+                        {generalForm.fineRules.length > 5 && (
+                          <div className="flex items-center justify-between pt-1 px-1 text-xs">
+                            <span className="text-slate-500 text-[11px]">
+                              Showing {(fineRulePage - 1) * 5 + 1} to {Math.min(fineRulePage * 5, generalForm.fineRules.length)} of {generalForm.fineRules.length} slabs
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={fineRulePage === 1}
+                                onClick={() => setFineRulePage((prev) => Math.max(1, prev - 1))}
+                                className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer text-[11px]"
+                              >
+                                Previous
+                              </button>
+                              <span className="text-slate-600 font-bold px-1 text-[11px]">
+                                {fineRulePage} / {Math.ceil(generalForm.fineRules.length / 5)}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={fineRulePage >= Math.ceil(generalForm.fineRules.length / 5)}
+                                onClick={() => setFineRulePage((prev) => Math.min(Math.ceil(generalForm.fineRules.length / 5), prev + 1))}
+                                className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer text-[11px]"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
-            </div>
 
-            {/* Contacts & Currency */}
-            <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-purple-600" />
-                <span>Contact Details & Currency</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Library Helpdesk Email
-                  </label>
-                  <input
-                    type="email"
-                    value={generalForm.contactEmail}
-                    onChange={(e) =>
-                      setGeneralForm({ ...generalForm, contactEmail: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Library Contact Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={generalForm.contactPhone}
-                    onChange={(e) =>
-                      setGeneralForm({ ...generalForm, contactPhone: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Currency Symbol
-                  </label>
-                  <input
-                    type="text"
-                    value={generalForm.currency}
-                    onChange={(e) =>
-                      setGeneralForm({ ...generalForm, currency: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
-                  />
-                </div>
+              <div className="pt-3 border-t border-slate-100 flex justify-end">
+                <button
+                  id="save-lending-settings-btn"
+                  type="submit"
+                  disabled={savingSettings}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingSettings ? 'Saving...' : 'Save Lending Policies'}</span>
+                </button>
               </div>
-            </div>
+            </form>
+          </div>
+        )}
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                id="save-settings-btn"
-                type="submit"
-                disabled={savingSettings}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>{savingSettings ? 'Saving Settings...' : 'Save Configuration'}</span>
-              </button>
-            </div>
-          </form>
-
-          {/* DEMO DATA SEEDING CARD */}
-          <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 border border-blue-200/80 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                <Database className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span>Comprehensive Demo Dataset</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                    30+ Books & 25+ Students
+        {/* TAB 4: BOOK CATEGORIES MASTER */}
+        {activeTab === 'categories' && (
+          <div className="space-y-4">
+            {/* Top Header Card */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Book Categories & Sub-Categories Master
+                  </h3>
+                  <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-bold">
+                    {categories.length} Categories •{' '}
+                    {categories.reduce(
+                      (acc, cat) =>
+                        acc + (Array.isArray(cat.subCategories) ? cat.subCategories.length : 0),
+                      0
+                    )}{' '}
+                    Sub-Categories
                   </span>
-                </h4>
-                <p className="text-xs text-slate-600 mt-1 max-w-xl">
-                  Quickly seed realistic books across all 9 categories with sub-categories, active student borrowers across classes, and live circulation records.
+                </div>
+                <p className="text-xs text-slate-500 max-w-2xl">
+                  Define main curriculum categories, language genres, and sub-categories to organize your school library books. Sub-categories make book cataloging, tagging, and search seamless.
                 </p>
               </div>
-            </div>
 
-            <button
-              id="seed-more-data-btn"
-              type="button"
-              onClick={handleSeedData}
-              disabled={seedingData}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-75"
-            >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>{seedingData ? 'Seeding Demo Data...' : 'Seed / Re-populate Demo Data'}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* CATEGORY MASTER TAB */}
-      {activeTab === 'categories' && (
-        <div className="space-y-4">
-          {/* Top Header Card */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Book Categories & Sub-Categories Master
-                </h3>
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-bold">
-                  {categories.length} Categories •{' '}
-                  {categories.reduce(
-                    (acc, cat) =>
-                      acc + (Array.isArray(cat.subCategories) ? cat.subCategories.length : 0),
-                    0
-                  )}{' '}
-                  Sub-Categories
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 max-w-2xl">
-                Define main curriculum categories, language genres, and sub-categories to organize your school library books. Sub-categories make book cataloging, tagging, and search seamless.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
               <button
                 id="add-category-btn"
                 type="button"
@@ -1861,9 +1846,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
                   </div>
                 );
               })()}
+            </div>
           </div>
+        )}
         </div>
-      )}
+      </div>
 
       {/* LIMIT VIOLATION BLOCKING MODAL */}
       {isLimitViolationModalOpen && limitViolationData && (
@@ -2486,6 +2473,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
             <input
               id="new-fine-rule-date"
               type="date"
+              min={new Date().toISOString().split('T')[0]}
               required
               value={newFineRuleForm.effectiveDate}
               onChange={(e) =>

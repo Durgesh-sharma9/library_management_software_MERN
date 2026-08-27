@@ -161,6 +161,8 @@ export async function getBooks(req: Request, res: Response) {
       } else if (status === 'active') {
         query.isActive = true;
       }
+    } else {
+      query.isActive = { $ne: false };
     }
 
     const books = await Book.find(query)
@@ -234,6 +236,34 @@ export async function getBooks(req: Request, res: Response) {
           copiesList: updatedCopiesList,
           accessionNumber: book.accessionNumber,
         });
+      }
+
+      // Self-healing: Ensure availableCopies, assignedCopies, etc. perfectly match copiesList status
+      if (Array.isArray(book.copiesList) && book.copiesList.length > 0) {
+        const availCount = book.copiesList.filter((c: any) => c.status === 'available').length;
+        const assignCount = book.copiesList.filter((c: any) => c.status === 'assigned').length;
+        const lostCount = book.copiesList.filter((c: any) => c.status === 'lost').length;
+        const damagedCount = book.copiesList.filter((c: any) => c.status === 'damaged').length;
+
+        if (
+          book.availableCopies !== availCount ||
+          book.assignedCopies !== assignCount ||
+          book.lostCopies !== lostCount ||
+          book.damagedCopies !== damagedCount
+        ) {
+          book.availableCopies = availCount;
+          book.assignedCopies = assignCount;
+          book.lostCopies = lostCount;
+          book.damagedCopies = damagedCount;
+          book.totalCopies = book.copiesList.length;
+          await Book.findByIdAndUpdate(book._id, {
+            availableCopies: availCount,
+            assignedCopies: assignCount,
+            lostCopies: lostCount,
+            damagedCopies: damagedCount,
+            totalCopies: book.copiesList.length,
+          });
+        }
       }
     }
 
@@ -606,24 +636,14 @@ export async function deleteBook(req: Request, res: Response) {
     if (book.assignedCopies > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete book because ${book.assignedCopies} copy/copies are currently assigned. Please return them first or deactivate the book.`,
-      });
-    }
-
-    // Check if assignment history exists
-    const hasHistory = await Assignment.exists({ book: id });
-    if (hasHistory) {
-      book.isActive = false;
-      await book.save();
-      return res.json({
-        success: true,
-        message: 'Book has past borrowing history, so it was marked inactive to preserve records.',
+        message: `Cannot delete book "${book.title}" because ${book.assignedCopies} copy/copies are currently assigned to students/teachers. Please return them first.`,
       });
     }
 
     await Book.findByIdAndDelete(id);
-    return res.json({ success: true, message: 'Book deleted successfully' });
+    return res.json({ success: true, message: `Book "${book.title}" deleted successfully from catalog.` });
   } catch (error: any) {
+    console.error('Delete book error:', error);
     return res.status(500).json({ success: false, message: 'Failed to delete book' });
   }
 }
@@ -834,6 +854,13 @@ export async function reportDirectLostDamagedBook(req: Request, res: Response) {
     if (assignmentId) {
       assignment = await Assignment.findById(assignmentId);
     }
+    if (!assignment && memberId && bookId) {
+      assignment = await Assignment.findOne({
+        member: memberId,
+        book: bookId,
+        status: { $in: ['assigned', 'overdue'] },
+      });
+    }
 
     const fineNum = Math.max(0, parseFloat(fineAmount) || 0);
     const normalizedFineStatus = fineNum === 0 ? 'none' : (fineStatus === 'paid' ? 'paid' : 'pending');
@@ -851,9 +878,37 @@ export async function reportDirectLostDamagedBook(req: Request, res: Response) {
         assignment.remarks = `Book copy replaced with a new copy by student/borrower.${replacementAccessionNo ? ` (New Acc: ${replacementAccessionNo.trim()})` : ''} ${reason.trim()}`.trim();
         await assignment.save();
 
-        // Preserve stock: Decrement assignedCopies, copy is now available in library
-        book.assignedCopies = Math.max(0, (book.assignedCopies || 0) - 1);
-        book.availableCopies = Math.max(0, (book.totalCopies || 0) - book.assignedCopies);
+        // Update copiesList: Mark copy available and update accessionNumber if replacement is provided
+        if (Array.isArray(book.copiesList)) {
+          const copy = book.copiesList.find(
+            (c) =>
+              (c.assignmentId && c.assignmentId.toString() === assignment._id.toString()) ||
+              (assignment.accessionNumber && c.accessionNumber === assignment.accessionNumber) ||
+              (assignment.copyNumber && c.copyNumber === assignment.copyNumber)
+          );
+          if (copy) {
+            if (replacementAccessionNo && replacementAccessionNo.trim()) {
+              copy.accessionNumber = replacementAccessionNo.trim();
+            }
+            copy.status = 'available';
+            copy.assignedTo = null;
+            copy.assignedToName = '';
+            copy.assignedToId = '';
+            copy.assignedDate = null;
+            copy.dueDate = null;
+            copy.assignmentId = null;
+          }
+
+          // Recalculate book stock counters from copiesList for 100% accuracy
+          book.assignedCopies = book.copiesList.filter((c) => c.status === 'assigned').length;
+          book.availableCopies = book.copiesList.filter((c) => c.status === 'available').length;
+          book.lostCopies = book.copiesList.filter((c) => c.status === 'lost').length;
+          book.damagedCopies = book.copiesList.filter((c) => c.status === 'damaged').length;
+          book.totalCopies = book.copiesList.length;
+        } else {
+          book.assignedCopies = Math.max(0, (book.assignedCopies || 0) - 1);
+          book.availableCopies = Math.max(0, (book.totalCopies || 0) - book.assignedCopies);
+        }
         await book.save();
       }
 
@@ -904,14 +959,40 @@ export async function reportDirectLostDamagedBook(req: Request, res: Response) {
       assignment.remarks = `Condition: ${effectiveType.toUpperCase()} (${reason.trim()})`;
       await assignment.save();
 
-      book.assignedCopies = Math.max(0, (book.assignedCopies || 0) - 1);
-      if (effectiveType === 'lost') {
-        book.lostCopies = (book.lostCopies || 0) + 1;
+      // Update copiesList: Mark copy as lost or damaged and release assignment
+      if (Array.isArray(book.copiesList)) {
+        const copy = book.copiesList.find(
+          (c) =>
+            (c.assignmentId && c.assignmentId.toString() === assignment._id.toString()) ||
+            (assignment.accessionNumber && c.accessionNumber === assignment.accessionNumber) ||
+            (assignment.copyNumber && c.copyNumber === assignment.copyNumber)
+        );
+        if (copy) {
+          copy.status = (effectiveType === 'damaged' ? 'damaged' : 'lost') as any;
+          copy.assignedTo = null;
+          copy.assignedToName = '';
+          copy.assignedToId = '';
+          copy.assignedDate = null;
+          copy.dueDate = null;
+          copy.assignmentId = null;
+        }
+
+        // Recalculate book stock counters from copiesList for 100% accuracy
+        book.assignedCopies = book.copiesList.filter((c) => c.status === 'assigned').length;
+        book.availableCopies = book.copiesList.filter((c) => c.status === 'available').length;
+        book.lostCopies = book.copiesList.filter((c) => c.status === 'lost').length;
+        book.damagedCopies = book.copiesList.filter((c) => c.status === 'damaged').length;
+        book.totalCopies = book.copiesList.length;
       } else {
-        book.damagedCopies = (book.damagedCopies || 0) + 1;
+        book.assignedCopies = Math.max(0, (book.assignedCopies || 0) - 1);
+        if (effectiveType === 'lost') {
+          book.lostCopies = (book.lostCopies || 0) + 1;
+        } else {
+          book.damagedCopies = (book.damagedCopies || 0) + 1;
+        }
+        book.totalCopies = Math.max(0, (book.totalCopies || 1) - 1);
+        book.availableCopies = Math.max(0, book.totalCopies - book.assignedCopies);
       }
-      book.totalCopies = Math.max(1, (book.totalCopies || 1) - 1);
-      book.availableCopies = Math.max(0, book.totalCopies - book.assignedCopies);
       await book.save();
 
       const log = await LostDamageLog.create({
@@ -956,11 +1037,28 @@ export async function reportDirectLostDamagedBook(req: Request, res: Response) {
 
     // Deduct from availableCopies and totalCopies, track in lostCopies/damagedCopies
     book.availableCopies = Math.max(0, book.availableCopies - count);
-    book.totalCopies = Math.max(1, book.totalCopies - count);
+    book.totalCopies = Math.max(0, book.totalCopies - count);
     if (effectiveType === 'lost') {
       book.lostCopies = (book.lostCopies || 0) + count;
     } else {
       book.damagedCopies = (book.damagedCopies || 0) + count;
+    }
+
+    // Update copiesList for unassigned inventory
+    if (Array.isArray(book.copiesList)) {
+      let markedCount = 0;
+      for (const copy of book.copiesList) {
+        if (copy.status === 'available' && markedCount < count) {
+          copy.status = (effectiveType === 'damaged' ? 'damaged' : 'lost') as any;
+          copy.assignedTo = null;
+          copy.assignedToName = '';
+          copy.assignedToId = '';
+          copy.assignedDate = null;
+          copy.dueDate = null;
+          copy.assignmentId = null;
+          markedCount++;
+        }
+      }
     }
     await book.save();
 
@@ -1031,6 +1129,18 @@ export async function updateLostDamageLog(req: Request, res: Response) {
     if (paymentMethod !== undefined) log.paymentMethod = paymentMethod.trim();
     if (receiptNo !== undefined) log.receiptNo = receiptNo.trim();
     if (reportedBy !== undefined) log.reportedBy = reportedBy.trim();
+
+    // Sync linked assignment fine status if exists
+    if (log.assignment) {
+      const assignment = await Assignment.findById(log.assignment);
+      if (assignment) {
+        if (fineStatus !== undefined) assignment.fineStatus = fineStatus;
+        if (fineAmount !== undefined) assignment.fineAmount = log.fineAmount;
+        if (paymentMethod !== undefined) assignment.paymentMethod = log.paymentMethod;
+        if (receiptNo !== undefined) assignment.receiptNo = log.receiptNo;
+        await assignment.save();
+      }
+    }
 
     await log.save();
 
@@ -1106,6 +1216,68 @@ export async function getLostDamageLogs(req: Request, res: Response) {
 
     if (bookId && bookId !== 'all') {
       query.book = bookId;
+    }
+
+    // Auto-repair existing unlinked logs for members/books
+    const unlinkedLogs = await LostDamageLog.find({ member: { $ne: null }, book: { $ne: null } });
+    for (const l of unlinkedLogs) {
+      const activeAssign = await Assignment.findOne({
+        member: l.member,
+        book: l.book,
+        status: { $in: ['assigned', 'overdue'] },
+      });
+      if (activeAssign) {
+        l.assignment = activeAssign._id;
+        await l.save();
+
+        const b = await Book.findById(l.book);
+        if (b && Array.isArray(b.copiesList)) {
+          const copy = b.copiesList.find(
+            (c: any) =>
+              (c.assignmentId && c.assignmentId.toString() === activeAssign._id.toString()) ||
+              (c.assignedTo && c.assignedTo.toString() === l.member.toString()) ||
+              (activeAssign.accessionNumber && c.accessionNumber === activeAssign.accessionNumber)
+          );
+
+          if (l.type === 'replaced' || l.resolutionType === 'book_replaced') {
+            activeAssign.status = 'returned';
+            activeAssign.lostOrDamaged = 'replaced';
+            await activeAssign.save();
+
+            if (copy) {
+              if (l.replacementAccessionNo) copy.accessionNumber = l.replacementAccessionNo.trim();
+              copy.status = 'available';
+              copy.assignedTo = null;
+              copy.assignedToName = '';
+              copy.assignedToId = '';
+              copy.assignedDate = null;
+              copy.dueDate = null;
+              copy.assignmentId = null;
+            }
+          } else {
+            activeAssign.status = (l.type === 'damaged' ? 'damaged' : 'lost') as any;
+            activeAssign.lostOrDamaged = (l.type === 'damaged' ? 'damaged' : 'lost') as any;
+            await activeAssign.save();
+
+            if (copy) {
+              copy.status = (l.type === 'damaged' ? 'damaged' : 'lost') as any;
+              copy.assignedTo = null;
+              copy.assignedToName = '';
+              copy.assignedToId = '';
+              copy.assignedDate = null;
+              copy.dueDate = null;
+              copy.assignmentId = null;
+            }
+          }
+
+          b.assignedCopies = b.copiesList.filter((c: any) => c.status === 'assigned').length;
+          b.availableCopies = b.copiesList.filter((c: any) => c.status === 'available').length;
+          b.lostCopies = b.copiesList.filter((c: any) => c.status === 'lost').length;
+          b.damagedCopies = b.copiesList.filter((c: any) => c.status === 'damaged').length;
+          b.totalCopies = b.copiesList.length;
+          await b.save();
+        }
+      }
     }
 
     let logs = await LostDamageLog.find(query)

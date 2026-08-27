@@ -23,8 +23,13 @@ import {
   DollarSign,
   Image as ImageIcon,
   Upload,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Calendar,
+  RotateCcw,
 } from 'lucide-react';
-import { bookService, categoryService, supplierService, shelfService, uploadService } from '../../services/api';
+import { bookService, categoryService, supplierService, shelfService, uploadService, assignmentService } from '../../services/api';
 import { Book, BookCategory, Supplier, Shelf } from '../../types';
 import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/Badge';
@@ -55,11 +60,21 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
   const [selectedShelf, setSelectedShelf] = useState<string>('all');
 
-  // Add / Edit / Bulk Import Modal states
+  // Add / Edit / Bulk Import / Quick Category Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState<boolean>(false);
   const [isCopiesModalOpen, setIsCopiesModalOpen] = useState<boolean>(false);
+  const [isQuickCategoryModalOpen, setIsQuickCategoryModalOpen] = useState<boolean>(false);
+  const [expandedBookIds, setExpandedBookIds] = useState<string[]>([]);
+  const [returningCopyAcc, setReturningCopyAcc] = useState<string | null>(null);
+  const [newCategoryForm, setNewCategoryForm] = useState({
+    name: '',
+    description: '',
+    subCategories: '',
+  });
+  const [creatingCategory, setCreatingCategory] = useState<boolean>(false);
+  const [addCategoryError, setAddCategoryError] = useState<string>('');
   const [selectedBookForCopiesModal, setSelectedBookForCopiesModal] = useState<Book | null>(null);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
 
@@ -357,26 +372,121 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
     }
   };
 
-  const handleDeleteBook = async (book: Book) => {
-    if (book.assignedCopies > 0) {
-      alert(
-        `Cannot remove this book: ${book.assignedCopies} copy/copies are currently loaned out. Please collect them first.`
-      );
-      return;
-    }
-
-    const confirm = window.confirm(
-      `Are you sure you want to delete "${book.title}"?`
-    );
-    if (!confirm) return;
-
+  const handleToggleBookStatus = async (book: Book) => {
     try {
-      const res = await bookService.delete(book._id);
-      setFeedbackMessage({ type: 'success', text: res.message || 'Book removed from catalog.' });
+      const newStatus = !book.isActive;
+      await bookService.update(book._id, { isActive: newStatus });
+      setFeedbackMessage({
+        type: 'success',
+        text: `Book "${book.title}" status changed to ${newStatus ? 'ACTIVE' : 'INACTIVE'}.`,
+      });
       fetchBooks();
       fetchMasters();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to remove book.');
+      alert(err.response?.data?.message || 'Failed to update book status.');
+    }
+  };
+
+  const toggleExpandBook = (bookId: string) => {
+    setExpandedBookIds((prev) =>
+      prev.includes(bookId) ? prev.filter((id) => id !== bookId) : [...prev, bookId]
+    );
+  };
+
+  const handleReturnCopy = async (book: Book, copy: any) => {
+    const confirmReturn = window.confirm(
+      `Are you sure you want to return copy "${copy.accessionNumber}" of "${book.title}" back to library inventory?`
+    );
+    if (!confirmReturn) return;
+
+    try {
+      setReturningCopyAcc(copy.accessionNumber);
+      setFormError('');
+
+      let assignmentIdToReturn = copy.assignmentId;
+
+      if (!assignmentIdToReturn) {
+        const activeAssignments = await assignmentService.getAll({
+          bookId: book._id,
+          status: 'assigned',
+        });
+        const matched = activeAssignments.find(
+          (a) =>
+            a.accessionNumber === copy.accessionNumber ||
+            a.copyNumber === copy.copyNumber ||
+            (typeof a.member === 'object' &&
+              a.member?._id ===
+                (typeof copy.assignedTo === 'object'
+                  ? copy.assignedTo?._id
+                  : copy.assignedTo))
+        );
+        if (matched) {
+          assignmentIdToReturn = matched._id;
+        }
+      }
+
+      if (!assignmentIdToReturn) {
+        alert(`Active assignment record not found for copy ${copy.accessionNumber}.`);
+        return;
+      }
+
+      const res = await assignmentService.returnBook(assignmentIdToReturn, { finePaid: true });
+      setFeedbackMessage({
+        type: 'success',
+        text: res.message || `Book copy ${copy.accessionNumber} returned to inventory!`,
+      });
+
+      await fetchBooks();
+      await fetchMasters();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to return book copy.');
+    } finally {
+      setReturningCopyAcc(null);
+    }
+  };
+
+  const handleQuickAddCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryForm.name.trim()) {
+      setAddCategoryError('Category name is required.');
+      return;
+    }
+
+    try {
+      setCreatingCategory(true);
+      setAddCategoryError('');
+      const subCatArray = newCategoryForm.subCategories
+        ? newCategoryForm.subCategories
+            .split(/[,;\n]/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
+      const newCategory = await categoryService.create({
+        name: newCategoryForm.name.trim(),
+        description: newCategoryForm.description.trim(),
+        subCategories: subCatArray,
+        isActive: true,
+      });
+
+      await fetchMasters();
+
+      setFormData((prev) => ({
+        ...prev,
+        category: newCategory._id,
+        subCategory: newCategory.subCategories && newCategory.subCategories.length > 0 ? newCategory.subCategories[0] : '',
+      }));
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Category "${newCategory.name}" created and selected!`,
+      });
+      setIsQuickCategoryModalOpen(false);
+      setNewCategoryForm({ name: '', description: '', subCategories: '' });
+    } catch (err: any) {
+      setAddCategoryError(err.response?.data?.message || 'Failed to create category.');
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -664,6 +774,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {books.map((book) => {
+                      const isExpanded = expandedBookIds.includes(book._id);
                       const categoryName =
                         typeof book.category === 'object' && book.category !== null
                           ? book.category.name
@@ -675,161 +786,368 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                           : (book.supplier || 'Standard Supplier');
 
                       return (
-                        <tr key={book._id} className="hover:bg-slate-50/80 transition-colors">
-                          {/* Accession No & Title */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-start gap-3">
-                              {book.coverImage ? (
-                                <img
-                                  src={book.coverImage}
-                                  alt={book.title}
-                                  className="w-10 h-14 object-cover rounded-lg border border-slate-200 shadow-2xs shrink-0 bg-slate-100 mt-0.5"
-                                />
-                              ) : (
-                                <div className="w-10 h-14 rounded-lg border border-slate-200 bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center shrink-0 text-indigo-400 mt-0.5 shadow-2xs">
-                                  <BookOpen className="w-5 h-5 text-indigo-500" />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                  <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
-                                    {book.copiesList && book.copiesList.length > 1
-                                      ? `${book.copiesList[0]?.accessionNumber} ~ ${book.copiesList[book.copiesList.length - 1]?.accessionNumber}`
-                                      : book.accessionNumber || 'ACC-N/A'}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedBookForCopiesModal(book);
-                                      setIsCopiesModalOpen(true);
-                                    }}
-                                    className="text-[10px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded cursor-pointer transition-all flex items-center gap-1"
-                                    title="Click to view all individual copy serial numbers and their loan statuses"
-                                  >
-                                    <Hash className="w-3 h-3" />
-                                    <span>{book.totalCopies} {book.totalCopies === 1 ? 'Copy' : 'Copies'}</span>
-                                  </button>
-                                </div>
-                                <div className="font-bold text-slate-900 text-sm leading-snug">
-                                  {book.title}
+                        <React.Fragment key={book._id}>
+                          <tr className={`transition-colors ${isExpanded ? 'bg-indigo-50/50 border-l-4 border-l-indigo-600' : 'hover:bg-slate-50/80'}`}>
+                            {/* Accession No & Title */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-start gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandBook(book._id)}
+                                  className={`p-1.5 rounded-lg border transition-all cursor-pointer mt-0.5 shrink-0 ${
+                                    isExpanded
+                                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 border-slate-200'
+                                  }`}
+                                  title={isExpanded ? "Collapse copy details" : "Expand to view all copies & issued student details"}
+                                >
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+
+                                {book.coverImage ? (
+                                  <img
+                                    src={book.coverImage}
+                                    alt={book.title}
+                                    className="w-10 h-14 object-cover rounded-lg border border-slate-200 shadow-2xs shrink-0 bg-slate-100 mt-0.5"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-14 rounded-lg border border-slate-200 bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center shrink-0 text-indigo-400 mt-0.5 shadow-2xs">
+                                    <BookOpen className="w-5 h-5 text-indigo-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                    <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                                      {book.copiesList && book.copiesList.length > 1
+                                        ? `${book.copiesList[0]?.accessionNumber} ~ ${book.copiesList[book.copiesList.length - 1]?.accessionNumber}`
+                                        : book.accessionNumber || 'ACC-N/A'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExpandBook(book._id)}
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded border cursor-pointer transition-all flex items-center gap-1 ${
+                                        isExpanded
+                                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                                          : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200'
+                                      }`}
+                                      title="Click to expand/collapse copy status"
+                                    >
+                                      <Hash className="w-3 h-3" />
+                                      <span>{book.totalCopies} {book.totalCopies === 1 ? 'Copy' : 'Copies'}</span>
+                                      {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
+                                    </button>
+                                  </div>
+                                  <div className="font-bold text-slate-900 text-sm leading-snug">
+                                    {book.title}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Author & Publisher */}
-                          <td className="py-3.5 px-3">
-                            <div className="font-semibold text-slate-800">
-                              By {book.author}
-                            </div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">
-                              {book.publisher || 'Publisher N/A'}{' '}
-                              {book.publisherNumber ? `• ${book.publisherNumber}` : ''}
-                            </div>
-                          </td>
+                            {/* Author & Publisher */}
+                            <td className="py-3.5 px-3">
+                              <div className="font-semibold text-slate-800">
+                                By {book.author}
+                              </div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                {book.publisher || 'Publisher N/A'}{' '}
+                                {book.publisherNumber ? `• ${book.publisherNumber}` : ''}
+                              </div>
+                            </td>
 
-                          {/* Category & Language */}
-                          <td className="py-3.5 px-3">
-                            <div className="flex flex-col items-start gap-1">
-                              <Badge variant="purple" size="sm">
-                                {categoryName}
-                              </Badge>
-                              {book.subCategory && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-semibold">
-                                  {book.subCategory}
+                            {/* Category & Language */}
+                            <td className="py-3.5 px-3">
+                              <div className="flex flex-col items-start gap-1">
+                                <Badge variant="purple" size="sm">
+                                  {categoryName}
+                                </Badge>
+                                {book.subCategory && (
+                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-semibold">
+                                    {book.subCategory}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-medium mt-1">
+                                Lang: {book.language}
+                              </div>
+                            </td>
+
+                            {/* Price & Supplier */}
+                            <td className="py-3.5 px-3">
+                              <div className="font-mono font-bold text-slate-900 text-xs">
+                                ₹{(book.price || 0).toLocaleString('en-IN')}
+                              </div>
+                              <div className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5">
+                                <Truck className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="truncate max-w-[120px]" title={supplierName}>
+                                  {supplierName}
                                 </span>
+                              </div>
+                            </td>
+
+                            {/* Shelf Location */}
+                            <td className="py-3.5 px-3">
+                              {book.shelfLocation ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-800 font-bold border border-purple-200 text-[11px]">
+                                  <Archive className="w-3 h-3 text-purple-600" />
+                                  <span>{book.shelfLocation}</span>
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">Unassigned</span>
                               )}
-                            </div>
-                            <div className="text-[11px] text-slate-500 font-medium mt-1">
-                              Lang: {book.language}
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Price & Supplier */}
-                          <td className="py-3.5 px-3">
-                            <div className="font-mono font-bold text-slate-900 text-xs">
-                              ₹{(book.price || 0).toLocaleString('en-IN')}
-                            </div>
-                            <div className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5">
-                              <Truck className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[120px]" title={supplierName}>
-                                {supplierName}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Shelf Location */}
-                          <td className="py-3.5 px-3">
-                            {book.shelfLocation ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-800 font-bold border border-purple-200 text-[11px]">
-                                <Archive className="w-3 h-3 text-purple-600" />
-                                <span>{book.shelfLocation}</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">Unassigned</span>
-                            )}
-                          </td>
-
-                          {/* Total Copies */}
-                          <td className="py-3.5 px-2 text-center font-bold text-slate-900">
-                            {book.totalCopies}
-                          </td>
-
-                          {/* Available Copies */}
-                          <td className="py-3.5 px-2 text-center">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-xs ${
-                                book.availableCopies > 0
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}
-                            >
-                              {book.availableCopies}
-                            </span>
-                          </td>
-
-                          {/* Assigned */}
-                          <td className="py-3.5 px-2 text-center font-semibold text-blue-700">
-                            {book.assignedCopies}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3.5 px-3">
-                            {book.isActive ? (
-                              <Badge variant="success" size="sm">
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge variant="neutral" size="sm">
-                                Inactive
-                              </Badge>
-                            )}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                            {/* Total Copies */}
+                            <td className="py-3.5 px-2 text-center">
                               <button
-                                id={`edit-book-${book._id}`}
                                 type="button"
-                                onClick={() => handleOpenEditModal(book)}
-                                title="Edit Book Details"
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                onClick={() => toggleExpandBook(book._id)}
+                                className="font-bold text-slate-900 hover:text-indigo-600 hover:underline cursor-pointer"
+                                title="Click to expand copy details"
                               >
-                                <Edit2 className="w-4 h-4" />
+                                {book.totalCopies}
                               </button>
+                            </td>
+
+                            {/* Available Copies */}
+                            <td className="py-3.5 px-2 text-center">
                               <button
-                                id={`delete-book-${book._id}`}
                                 type="button"
-                                onClick={() => handleDeleteBook(book)}
-                                title="Delete Book"
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                onClick={() => toggleExpandBook(book._id)}
+                                className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-xs cursor-pointer transition-all hover:scale-105 ${
+                                  book.availableCopies > 0
+                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                                }`}
+                                title="Click to view copy details"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                {book.availableCopies}
                               </button>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+
+                            {/* Assigned */}
+                            <td className="py-3.5 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandBook(book._id)}
+                                className="font-semibold text-blue-700 hover:text-indigo-800 hover:underline cursor-pointer"
+                                title="Click to view assigned copy details"
+                              >
+                                {book.assignedCopies}
+                              </button>
+                            </td>
+
+                            {/* Status Toggle */}
+                            <td className="py-3.5 px-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBookStatus(book)}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer border shadow-2xs ${
+                                  book.isActive
+                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
+                                }`}
+                                title={book.isActive ? "Click to set INACTIVE" : "Click to set ACTIVE"}
+                              >
+                                <span className={`w-2 h-2 rounded-full ${book.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                                <span>{book.isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+                              </button>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  id={`edit-book-${book._id}`}
+                                  type="button"
+                                  onClick={() => handleOpenEditModal(book)}
+                                  title="Edit Book Details"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* EXPANDED COPIES ACCORDION DRAWER (COMPACT LIST VIEW) */}
+                          {isExpanded && (
+                            <tr className="bg-indigo-50/30 border-b border-indigo-200/60">
+                              <td colSpan={10} className="p-3">
+                                <div className="bg-white rounded-2xl p-3 border border-indigo-100 shadow-xs space-y-2.5">
+                                  {/* Drawer Header */}
+                                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                      <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-2xs">
+                                        <Layers className="w-3.5 h-3.5" />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-bold text-slate-900 text-xs">
+                                            Copies List for <span className="text-indigo-600">{book.title}</span>
+                                          </h4>
+                                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                                            {book.totalCopies} {book.totalCopies === 1 ? 'Copy' : 'Copies'}
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                          Available: <span className="text-emerald-600 font-bold">{book.availableCopies}</span> | Issued: <span className="text-amber-600 font-bold">{book.assignedCopies}</span>
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedBookForCopiesModal(book);
+                                          setIsCopiesModalOpen(true);
+                                        }}
+                                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Info className="w-3 h-3" />
+                                        <span>Full View Modal</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleExpandBook(book._id)}
+                                        className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <ChevronUp className="w-3.5 h-3.5" />
+                                        <span>Collapse</span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Compact Sub-Table List */}
+                                  <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                      <thead>
+                                        <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                                          <th className="py-2 px-3 w-14">Copy #</th>
+                                          <th className="py-2 px-3">Accession / Serial No</th>
+                                          <th className="py-2 px-3">Status</th>
+                                          <th className="py-2 px-3">Assigned To / Location</th>
+                                          <th className="py-2 px-3">Issued Date</th>
+                                          <th className="py-2 px-3">Due Date</th>
+                                          <th className="py-2 px-3 text-right">Action</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-100">
+                                        {(() => {
+                                          const copies = book.copiesList && book.copiesList.length > 0
+                                            ? book.copiesList
+                                            : Array.from({ length: book.totalCopies }).map((_, idx) => ({
+                                                copyNumber: idx + 1,
+                                                accessionNumber: `${book.accessionNumber || 'ACC'}-${idx + 1}`,
+                                                status: idx < book.availableCopies ? 'available' : 'assigned',
+                                              }));
+
+                                          return copies.map((copy, idx) => {
+                                            const isAvailable = copy.status === 'available';
+                                            const isAssigned = copy.status === 'assigned';
+                                            const isLost = copy.status === 'lost';
+                                            const isDamaged = copy.status === 'damaged';
+
+                                            const memberObj: any = typeof copy.assignedTo === 'object' ? copy.assignedTo : null;
+                                            const memberName = memberObj?.name || copy.assignedToName || '';
+                                            const memberId = memberObj?.memberId || memberObj?.admissionNo || copy.assignedToId || '';
+                                            const memberClass = memberObj?.className ? `Class ${memberObj.className}${memberObj.section ? '-' + memberObj.section : ''}` : '';
+
+                                            return (
+                                              <tr key={idx} className="hover:bg-indigo-50/40 transition-colors text-xs">
+                                                <td className="py-2 px-3 font-semibold text-slate-400 text-[11px]">
+                                                  #{copy.copyNumber || (idx + 1)}
+                                                </td>
+                                                <td className="py-2 px-3 font-mono font-bold text-slate-900 text-xs">
+                                                  <span className="inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                                    <Hash className="w-3 h-3 text-slate-400" />
+                                                    {copy.accessionNumber}
+                                                  </span>
+                                                </td>
+                                                <td className="py-2 px-3">
+                                                  {isAvailable && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                      Available
+                                                    </span>
+                                                  )}
+                                                  {isAssigned && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                      <UserCheck className="w-3 h-3 text-amber-600" />
+                                                      Issued / On Loan
+                                                    </span>
+                                                  )}
+                                                  {isLost && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                      Lost
+                                                    </span>
+                                                  )}
+                                                  {isDamaged && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                      Damaged
+                                                    </span>
+                                                  )}
+                                                </td>
+                                                <td className="py-2 px-3 text-slate-800 font-medium">
+                                                  {isAssigned ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                      <span className="font-bold text-purple-950">{memberName || 'Student'}</span>
+                                                      {(memberId || memberClass) && (
+                                                        <span className="text-slate-500 text-[11px]">
+                                                          ({memberId ? `ID: ${memberId}` : ''}{memberId && memberClass ? ' • ' : ''}{memberClass})
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-slate-500 text-[11px] flex items-center gap-1">
+                                                      <Archive className="w-3 h-3 text-slate-400" />
+                                                      Shelf: <strong className="text-slate-700">{book.shelfLocation || 'Shelf A-1'}</strong>
+                                                    </span>
+                                                  )}
+                                                </td>
+                                                <td className="py-2 px-3 text-slate-600 text-[11px]">
+                                                  {copy.assignedDate ? new Date(copy.assignedDate).toLocaleDateString() : '—'}
+                                                </td>
+                                                <td className="py-2 px-3 font-semibold text-[11px]">
+                                                  {copy.dueDate ? (
+                                                    <span className="text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-mono font-bold">
+                                                      {new Date(copy.dueDate).toLocaleDateString()}
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-slate-400">—</span>
+                                                  )}
+                                                </td>
+                                                <td className="py-2 px-3 text-right">
+                                                  {isAssigned ? (
+                                                    <button
+                                                      type="button"
+                                                      disabled={returningCopyAcc === copy.accessionNumber}
+                                                      onClick={() => handleReturnCopy(book, copy)}
+                                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold rounded-lg transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                                                      title="Return this book copy to library inventory"
+                                                    >
+                                                      <RotateCcw className={`w-3 h-3 ${returningCopyAcc === copy.accessionNumber ? 'animate-spin' : ''}`} />
+                                                      <span>{returningCopyAcc === copy.accessionNumber ? 'Returning...' : 'Return Book'}</span>
+                                                    </button>
+                                                  ) : (
+                                                    <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                                      In Stock
+                                                    </span>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          });
+                                        })()}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -988,9 +1306,23 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Category <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Category <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewCategoryForm({ name: '', description: '', subCategories: '' });
+                    setAddCategoryError('');
+                    setIsQuickCategoryModalOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Category</span>
+                </button>
+              </div>
               <select
                 id="add-book-category"
                 value={formData.category}
@@ -1347,7 +1679,21 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">Category <span className="text-rose-500">*</span></label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewCategoryForm({ name: '', description: '', subCategories: '' });
+                    setAddCategoryError('');
+                    setIsQuickCategoryModalOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Category</span>
+                </button>
+              </div>
               <select
                 id="edit-book-category"
                 value={formData.category}
@@ -1709,6 +2055,84 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
             </div>
           </div>
         )}
+      </Modal>
+      {/* QUICK ADD CATEGORY MODAL */}
+      <Modal
+        isOpen={isQuickCategoryModalOpen}
+        onClose={() => setIsQuickCategoryModalOpen(false)}
+        title="Add New Book Category"
+        subtitle="Create a new category to assign to books"
+        maxWidth="sm"
+      >
+        <form onSubmit={handleQuickAddCategorySubmit} className="space-y-3.5">
+          {addCategoryError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+              {addCategoryError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Category Name <span className="text-rose-500">*</span>
+            </label>
+            <input
+              id="quick-add-category-name"
+              type="text"
+              required
+              value={newCategoryForm.name}
+              onChange={(e) => setNewCategoryForm({ ...newCategoryForm, name: e.target.value })}
+              placeholder="e.g. Science & Technology, Novels, General Knowledge"
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Sub-Categories (Optional)
+            </label>
+            <input
+              id="quick-add-category-subcategories"
+              type="text"
+              value={newCategoryForm.subCategories}
+              onChange={(e) => setNewCategoryForm({ ...newCategoryForm, subCategories: e.target.value })}
+              placeholder="e.g. Physics, Chemistry, Biology (comma separated)"
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-0.5">Separate multiple sub-categories with commas.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Description (Optional)
+            </label>
+            <textarea
+              id="quick-add-category-desc"
+              rows={2}
+              value={newCategoryForm.description}
+              onChange={(e) => setNewCategoryForm({ ...newCategoryForm, description: e.target.value })}
+              placeholder="Brief description about this category..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsQuickCategoryModalOpen(false)}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              id="save-quick-category-btn"
+              type="submit"
+              disabled={creatingCategory}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all disabled:opacity-75 cursor-pointer flex items-center gap-1.5"
+            >
+              {creatingCategory ? 'Saving...' : 'Add & Select Category'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -31,6 +31,7 @@ const MainApp: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('sidebar_collapsed') === 'true');
   const [navigationFilters, setNavigationFilters] = useState<FilterNavigation | undefined>(undefined);
 
   // Tab change with optional filter injection
@@ -117,13 +118,29 @@ const MainApp: React.FC = () => {
           }}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => {
+            setIsSidebarCollapsed((prev) => {
+              const next = !prev;
+              localStorage.setItem('sidebar_collapsed', String(next));
+              return next;
+            });
+          }}
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-56">
+        <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56'}`}>
           <Header
             title={tabTitles[activeTab]}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => {
+              setIsSidebarCollapsed((prev) => {
+                const next = !prev;
+                localStorage.setItem('sidebar_collapsed', String(next));
+                return next;
+              });
+            }}
           />
 
           <main className="flex-1 p-3 sm:p-4 lg:p-5 max-w-7xl w-full mx-auto">
