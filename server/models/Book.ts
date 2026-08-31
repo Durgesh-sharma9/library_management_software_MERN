@@ -21,6 +21,8 @@ export interface IBook extends Document {
   language: 'Hindi' | 'English' | 'Other';
   publisher?: string;
   publisherNumber?: string;
+  pages?: number;
+  publicationYear?: string;
   category: Types.ObjectId | any;
   subCategory?: string;
   price?: number;
@@ -47,6 +49,8 @@ const BookSchema = new Schema<IBook>(
     language: { type: String, required: true, enum: ['Hindi', 'English', 'Other'], default: 'English' },
     publisher: { type: String, trim: true, default: '' },
     publisherNumber: { type: String, trim: true, default: '' },
+    pages: { type: Number, min: 0, default: null },
+    publicationYear: { type: String, trim: true, default: '' },
     category: { type: Schema.Types.ObjectId, ref: 'BookCategory', required: true, index: true },
     subCategory: { type: String, trim: true, default: '', index: true },
     price: { type: Number, min: 0, default: 0 },

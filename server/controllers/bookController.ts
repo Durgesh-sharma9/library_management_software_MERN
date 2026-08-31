@@ -133,8 +133,8 @@ export async function getBooks(req: Request, res: Response) {
       query.category = category;
     }
 
-    if (subCategory && typeof subCategory === 'string' && subCategory !== 'all') {
-      query.subCategory = subCategory;
+    if (subCategory && typeof subCategory === 'string' && subCategory !== 'all' && subCategory.trim() !== '') {
+      query.subCategory = { $regex: new RegExp(`^${subCategory.trim()}$`, 'i') };
     }
 
     if (language && typeof language === 'string' && language !== 'all') {
@@ -307,6 +307,8 @@ export async function createBook(req: Request, res: Response) {
       language,
       publisher,
       publisherNumber,
+      pages,
+      publicationYear,
       category,
       subCategory,
       price,
@@ -450,6 +452,9 @@ export async function createBook(req: Request, res: Response) {
       if (supDoc) validSupplier = supDoc._id;
     }
 
+    const parsedPages = pages !== undefined && pages !== '' && !isNaN(Number(pages)) ? Math.max(0, parseInt(pages, 10)) : undefined;
+    const trimmedPubYear = publicationYear ? publicationYear.toString().trim() : '';
+
     const book = await Book.create({
       school: schoolId,
       accessionNumber: displayAccession,
@@ -458,6 +463,8 @@ export async function createBook(req: Request, res: Response) {
       language: language || 'English',
       publisher: publisher ? publisher.trim() : '',
       publisherNumber: publisherNumber ? publisherNumber.trim() : '',
+      pages: parsedPages,
+      publicationYear: trimmedPubYear,
       category: categoryDoc._id,
       subCategory: trimmedSubCategory,
       price: parsedPrice,
@@ -497,6 +504,8 @@ export async function updateBook(req: Request, res: Response) {
       language,
       publisher,
       publisherNumber,
+      pages,
+      publicationYear,
       category,
       subCategory,
       price,
@@ -593,6 +602,12 @@ export async function updateBook(req: Request, res: Response) {
     if (language) book.language = language;
     if (publisher !== undefined) book.publisher = publisher.trim();
     if (publisherNumber !== undefined) book.publisherNumber = publisherNumber.trim();
+    if (pages !== undefined) {
+      book.pages = pages === '' || isNaN(Number(pages)) ? undefined : Math.max(0, parseInt(pages, 10));
+    }
+    if (publicationYear !== undefined) {
+      book.publicationYear = publicationYear.toString().trim();
+    }
     if (category) book.category = category;
     if (subCategory !== undefined) book.subCategory = subCategory.trim();
     if (price !== undefined) {
@@ -770,6 +785,10 @@ export async function bulkImportBooks(req: Request, res: Response) {
         supplierId = sup._id;
       }
 
+      const rawPages = item.pages || item.Pages || item['No of Pages'] || item['Total Pages'] || item['Page Count'] || item.pageCount || 0;
+      const parsedPages = !isNaN(Number(rawPages)) && Number(rawPages) > 0 ? parseInt(rawPages, 10) : undefined;
+      const publicationYear = (item.publicationYear || item.PublicationYear || item['Publication Year'] || item.year || item.Year || item['Publish Year'] || '').toString().trim();
+
       const newBook = await Book.create({
         accessionNumber,
         title,
@@ -779,6 +798,8 @@ export async function bulkImportBooks(req: Request, res: Response) {
         language,
         publisher,
         publisherNumber,
+        pages: parsedPages,
+        publicationYear,
         price: parsedPrice,
         supplier: supplierId,
         shelfLocation,

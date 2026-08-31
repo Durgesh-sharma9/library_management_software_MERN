@@ -28,7 +28,9 @@ import {
   UserCheck,
   Calendar,
   RotateCcw,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { bookService, categoryService, supplierService, shelfService, uploadService, assignmentService } from '../../services/api';
 import { Book, BookCategory, Supplier, Shelf } from '../../types';
 import { Modal } from '../../components/Modal';
@@ -37,6 +39,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { BulkImportBooksModal } from '../../components/BulkImportBooksModal';
 import { BookAnalyticsView } from './BookAnalyticsView';
 import { useSettings } from '../../context/SettingsContext';
+import { compressImage, formatBytes } from '../../utils/imageCompressor';
 
 interface BooksPageProps {
   initialFilter?: { status?: string; categoryId?: string };
@@ -55,6 +58,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
   // Filters
   const [search, setSearch] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilter?.categoryId || 'all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilter?.status || 'all');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
@@ -86,6 +90,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
     language: 'Hindi' | 'English' | 'Other';
     publisher: string;
     publisherNumber: string;
+    pages: number | '';
+    publicationYear: string;
     category: string;
     subCategory: string;
     price: number;
@@ -101,6 +107,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
     language: 'English',
     publisher: '',
     publisherNumber: '',
+    pages: '',
+    publicationYear: '',
     category: '',
     subCategory: '',
     price: 250,
@@ -114,40 +122,46 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
   const [formError, setFormError] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+  const [imageCompressionInfo, setImageCompressionInfo] = useState<string>('');
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 8 * 1024 * 1024) {
-      setFormError('Image file size exceeds 8MB limit.');
+    if (file.size > 25 * 1024 * 1024) {
+      setFormError('Image file size exceeds 25MB limit.');
       return;
     }
 
     try {
       setUploadingImage(true);
       setFormError('');
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onloadend = async () => {
-        const base64Data = reader.result as string;
-        try {
-          const res = await uploadService.uploadImage(base64Data, file.name);
-          if (res && res.url) {
-            setFormData((prev) => ({ ...prev, coverImage: res.url }));
-          } else {
-            setFormError('Failed to upload image to ImageKit.');
-          }
-        } catch (err: any) {
-          setFormError('ImageKit Upload Error: ' + (err.response?.data?.message || err.message));
-        } finally {
-          setUploadingImage(false);
-        }
-      };
-    } catch {
+      setImageCompressionInfo('Compressing image in browser...');
+
+      // Compress image client-side before sending to server/ImageKit
+      const compressed = await compressImage(file, {
+        maxWidth: 900,
+        maxHeight: 1200,
+        quality: 0.8,
+        mimeType: 'image/jpeg',
+      });
+
+      const origSize = formatBytes(compressed.originalSizeBytes);
+      const compSize = formatBytes(compressed.compressedSizeBytes);
+      setImageCompressionInfo(`Auto-Compressed: ${origSize} ➔ ${compSize} (${compressed.reductionPercentage}% saved)`);
+
+      const cleanFileName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+      const res = await uploadService.uploadImage(compressed.base64, cleanFileName);
+      if (res && res.url) {
+        setFormData((prev) => ({ ...prev, coverImage: res.url }));
+      } else {
+        setFormError('Failed to upload compressed image to ImageKit.');
+      }
+    } catch (err: any) {
+      setFormError('Image compression / upload error: ' + (err.response?.data?.message || err.message));
+    } finally {
       setUploadingImage(false);
-      setFormError('Failed to process image file.');
     }
   };
 
@@ -177,6 +191,26 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
     }
   }, [formData.accessionNumber, formData.totalCopies]);
 
+  // Available sub-categories based on selected category (or all distinct subcategories if 'all' category is selected)
+  const availableSubCategories = useMemo(() => {
+    if (selectedCategory !== 'all') {
+      const found = categories.find((c) => c._id === selectedCategory);
+      return found?.subCategories || [];
+    }
+    const set = new Set<string>();
+    categories.forEach((c) => {
+      if (Array.isArray(c.subCategories)) {
+        c.subCategories.forEach((sub) => {
+          if (sub && sub.trim()) set.add(sub.trim());
+        });
+      }
+    });
+    books.forEach((b) => {
+      if (b.subCategory && b.subCategory.trim()) set.add(b.subCategory.trim());
+    });
+    return Array.from(set).sort();
+  }, [selectedCategory, categories, books]);
+
   const fetchMasters = async () => {
     try {
       const [catsData, supsData, shelvesData] = await Promise.all([
@@ -198,6 +232,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
       const data = await bookService.getAll({
         search: search.trim() || undefined,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        subCategory: selectedSubCategory !== 'all' ? selectedSubCategory : undefined,
         language: selectedLanguage !== 'all' ? selectedLanguage : undefined,
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
         supplier: selectedSupplier !== 'all' ? selectedSupplier : undefined,
@@ -217,7 +252,79 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
   useEffect(() => {
     fetchBooks();
-  }, [search, selectedCategory, selectedLanguage, selectedStatus, selectedSupplier, selectedShelf]);
+  }, [search, selectedCategory, selectedSubCategory, selectedLanguage, selectedStatus, selectedSupplier, selectedShelf]);
+
+  // Export current catalog / filtered books to Excel spreadsheet
+  const handleExportBooksExcel = () => {
+    try {
+      if (books.length === 0) {
+        setFeedbackMessage({ type: 'error', text: 'No books available to export in current selection.' });
+        return;
+      }
+
+      const exportData = books.map((b, idx) => {
+        const catName = typeof b.category === 'object' && b.category !== null ? b.category.name : 'General';
+        const supName = typeof b.supplier === 'object' && b.supplier !== null ? b.supplier.name : (b.supplier || 'N/A');
+
+        return {
+          'S.No': idx + 1,
+          'Accession No': b.accessionNumber || 'N/A',
+          'Book Title': b.title,
+          'Author Name': b.author,
+          'Category': catName,
+          'Sub-Category': b.subCategory || 'N/A',
+          'Language': b.language || 'English',
+          'Publisher': b.publisher || 'N/A',
+          'ISBN / Book No': b.publisherNumber || 'N/A',
+          'No of Pages': b.pages || 'N/A',
+          'Publication Year': b.publicationYear || 'N/A',
+          'Price (Rs)': b.price || 0,
+          'Supplier / Vendor': supName,
+          'Shelf / Rack Location': b.shelfLocation || 'Unassigned',
+          'Total Copies': b.totalCopies || 1,
+          'Available Copies': b.availableCopies || 0,
+          'Assigned Copies': b.assignedCopies || 0,
+          'Catalog Status': b.isActive ? 'Active' : 'Inactive',
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const colWidths = [
+        { wch: 8 },  // S.No
+        { wch: 22 }, // Accession No
+        { wch: 32 }, // Title
+        { wch: 24 }, // Author
+        { wch: 20 }, // Category
+        { wch: 20 }, // Sub Category
+        { wch: 12 }, // Language
+        { wch: 24 }, // Publisher
+        { wch: 18 }, // ISBN
+        { wch: 12 }, // Pages
+        { wch: 16 }, // Publication Year
+        { wch: 12 }, // Price
+        { wch: 24 }, // Supplier
+        { wch: 18 }, // Shelf
+        { wch: 12 }, // Total
+        { wch: 14 }, // Available
+        { wch: 14 }, // Assigned
+        { wch: 12 }, // Status
+      ];
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Books_Catalog');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Library_Books_Catalog_${timestamp}.xlsx`);
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Exported ${exportData.length} books successfully to Excel file!`,
+      });
+    } catch (err: any) {
+      console.error('Export books error:', err);
+      setFeedbackMessage({ type: 'error', text: 'Failed to export books to Excel.' });
+    }
+  };
 
   // Overall catalog summary stats
   const catalogStats = useMemo(() => {
@@ -262,6 +369,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
       // fallback to constructed default
     }
 
+    setImageCompressionInfo('');
     setFormData({
       accessionNumber: nextAcc,
       title: '',
@@ -269,6 +377,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
       language: 'English',
       publisher: '',
       publisherNumber: '',
+      pages: '',
+      publicationYear: '',
       category: categories.length > 0 ? categories[0]._id : '',
       subCategory: '',
       price: 250,
@@ -283,6 +393,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
   const handleOpenEditModal = (book: Book) => {
     setFormError('');
+    setImageCompressionInfo('');
     setCurrentBook(book);
     const supId = typeof book.supplier === 'object' && book.supplier !== null
       ? book.supplier._id
@@ -295,6 +406,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
       language: book.language,
       publisher: book.publisher || '',
       publisherNumber: book.publisherNumber || '',
+      pages: book.pages !== undefined && book.pages !== null ? book.pages : '',
+      publicationYear: book.publicationYear ? String(book.publicationYear) : '',
       category: typeof book.category === 'object' && book.category !== null ? book.category._id : (book.category as string),
       subCategory: book.subCategory || '',
       price: book.price !== undefined ? book.price : 250,
@@ -548,7 +661,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
         </div>
 
         {activeTab === 'catalog' && (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <button
               id="bulk-import-books-btn"
               type="button"
@@ -557,6 +670,17 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span>Bulk Import Excel</span>
+            </button>
+
+            <button
+              id="export-books-excel-btn"
+              type="button"
+              onClick={handleExportBooksExcel}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-semibold rounded-xl transition-all shadow-2xs cursor-pointer shrink-0"
+              title="Download current book catalog as Excel spreadsheet"
+            >
+              <Download className="w-4 h-4 text-indigo-600" />
+              <span>Export Catalog Excel</span>
             </button>
 
             <button
@@ -636,9 +760,9 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
 
           {/* Filter Bar */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5">
               {/* Search Input */}
-              <div className="relative sm:col-span-2">
+              <div className="relative sm:col-span-2 md:col-span-1 lg:col-span-2">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   id="book-search-input"
@@ -655,13 +779,36 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                 <select
                   id="book-category-filter"
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => {
+                    const newCat = e.target.value;
+                    setSelectedCategory(newCat);
+                    setSelectedSubCategory('all');
+                  }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
                 >
                   <option value="all">All Categories</option>
                   {categories.map((cat) => (
                     <option key={cat._id} value={cat._id}>
                       {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub-Category Filter */}
+              <div>
+                <select
+                  id="book-subcategory-filter"
+                  value={selectedSubCategory}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">
+                    {selectedCategory !== 'all' ? 'All Sub-Categories' : 'All Sub-Categories (Direct)'}
+                  </option>
+                  {availableSubCategories.map((sub, idx) => (
+                    <option key={idx} value={sub}>
+                      {sub}
                     </option>
                   ))}
                 </select>
@@ -732,20 +879,21 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                   icon={BookOpen}
                   title="No books found"
                   description={
-                    search || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
+                    search || selectedCategory !== 'all' || selectedSubCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
                       ? 'Try adjusting your search criteria or clearing filters.'
                       : 'Get started by cataloging your first book copy in the library.'
                   }
                   actionLabel={
-                    search || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
+                    search || selectedCategory !== 'all' || selectedSubCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
                       ? 'Reset Filters'
                       : 'Add New Book'
                   }
                   onAction={
-                    search || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
+                    search || selectedCategory !== 'all' || selectedSubCategory !== 'all' || selectedStatus !== 'all' || selectedSupplier !== 'all' || selectedShelf !== 'all'
                       ? () => {
                           setSearch('');
                           setSelectedCategory('all');
+                          setSelectedSubCategory('all');
                           setSelectedLanguage('all');
                           setSelectedStatus('all');
                           setSelectedSupplier('all');
@@ -853,6 +1001,20 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                                 {book.publisher || 'Publisher N/A'}{' '}
                                 {book.publisherNumber ? `• ${book.publisherNumber}` : ''}
                               </div>
+                              {(book.publicationYear || (book.pages !== undefined && book.pages !== null && book.pages > 0)) && (
+                                <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-1 flex-wrap">
+                                  {book.publicationYear && (
+                                    <span className="bg-slate-100 text-slate-700 font-semibold px-1.5 py-0.5 rounded border border-slate-200">
+                                      Pub: {book.publicationYear}
+                                    </span>
+                                  )}
+                                  {book.pages !== undefined && book.pages !== null && book.pages > 0 && (
+                                    <span className="bg-slate-100 text-slate-700 font-semibold px-1.5 py-0.5 rounded border border-slate-200">
+                                      {book.pages} pgs
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </td>
 
                             {/* Category & Language */}
@@ -1216,19 +1378,27 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                 </div>
               )}
 
-              <div className="flex-1 flex items-center gap-2">
-                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
-                  <Upload className="w-4 h-4 text-indigo-200" />
-                  <span>{uploadingImage ? 'Uploading to ImageKit CDN...' : 'Upload Book Cover Image'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageFileChange}
-                    disabled={uploadingImage}
-                  />
-                </label>
-                {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+              <div className="flex-1 flex flex-col justify-center gap-1.5">
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                    <Upload className="w-4 h-4 text-indigo-200" />
+                    <span>{uploadingImage ? 'Compressing & Uploading...' : 'Upload Book Cover Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileChange}
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+                </div>
+                {imageCompressionInfo && (
+                  <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{imageCompressionInfo}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1526,6 +1696,44 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
             </div>
           </div>
 
+          {/* No of Pages & Year of Publication */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                No. of Pages (कुल पृष्ठ)
+              </label>
+              <input
+                id="add-book-pages"
+                type="number"
+                min="1"
+                step="1"
+                value={formData.pages}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pages: e.target.value === '' ? '' : parseInt(e.target.value, 10) || '',
+                  })
+                }
+                placeholder="e.g. 350"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Year of Publication (प्रकाशन वर्ष)
+              </label>
+              <input
+                id="add-book-publication-year"
+                type="text"
+                value={formData.publicationYear}
+                onChange={(e) => setFormData({ ...formData, publicationYear: e.target.value })}
+                placeholder="e.g. 2024"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+          </div>
+
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
             <button
               type="button"
@@ -1604,19 +1812,27 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                 </div>
               )}
 
-              <div className="flex-1 flex items-center gap-2">
-                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
-                  <Upload className="w-4 h-4 text-indigo-200" />
-                  <span>{uploadingImage ? 'Uploading to ImageKit CDN...' : 'Upload Book Cover Image'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageFileChange}
-                    disabled={uploadingImage}
-                  />
-                </label>
-                {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+              <div className="flex-1 flex flex-col justify-center gap-1.5">
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                    <Upload className="w-4 h-4 text-indigo-200" />
+                    <span>{uploadingImage ? 'Compressing & Uploading...' : 'Upload Book Cover Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileChange}
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+                </div>
+                {imageCompressionInfo && (
+                  <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{imageCompressionInfo}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1833,7 +2049,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
             </div>
           </div>
 
-          {/* Status & Publisher */}
+          {/* Publisher & ISBN */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Publisher</label>
@@ -1842,7 +2058,58 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                 type="text"
                 value={formData.publisher}
                 onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
+                placeholder="e.g. NCERT / Oxford University Press"
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">ISBN / Edition No</label>
+              <input
+                id="edit-book-isbn"
+                type="text"
+                value={formData.publisherNumber}
+                onChange={(e) => setFormData({ ...formData, publisherNumber: e.target.value })}
+                placeholder="e.g. 978-817450"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Pages, Publication Year & Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                No. of Pages (कुल पृष्ठ)
+              </label>
+              <input
+                id="edit-book-pages"
+                type="number"
+                min="1"
+                step="1"
+                value={formData.pages}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pages: e.target.value === '' ? '' : parseInt(e.target.value, 10) || '',
+                  })
+                }
+                placeholder="e.g. 350"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Year of Publication
+              </label>
+              <input
+                id="edit-book-publication-year"
+                type="text"
+                value={formData.publicationYear}
+                onChange={(e) => setFormData({ ...formData, publicationYear: e.target.value })}
+                placeholder="e.g. 2024"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:outline-hidden focus:border-blue-500"
               />
             </div>
 
@@ -1920,6 +2187,30 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                   </h3>
                   <div className="text-xs text-slate-600 mt-0.5 flex items-center gap-2 flex-wrap">
                     <span>By {selectedBookForCopiesModal.author}</span>
+                    {selectedBookForCopiesModal.publisher && (
+                      <>
+                        <span>•</span>
+                        <span>{selectedBookForCopiesModal.publisher}</span>
+                      </>
+                    )}
+                    {selectedBookForCopiesModal.publisherNumber && (
+                      <>
+                        <span>•</span>
+                        <span className="font-mono">ISBN: {selectedBookForCopiesModal.publisherNumber}</span>
+                      </>
+                    )}
+                    {selectedBookForCopiesModal.publicationYear && (
+                      <>
+                        <span>•</span>
+                        <span>Year: {selectedBookForCopiesModal.publicationYear}</span>
+                      </>
+                    )}
+                    {selectedBookForCopiesModal.pages !== undefined && selectedBookForCopiesModal.pages !== null && selectedBookForCopiesModal.pages > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>{selectedBookForCopiesModal.pages} Pages</span>
+                      </>
+                    )}
                     <span>•</span>
                     <span>Shelf: {selectedBookForCopiesModal.shelfLocation || 'Unassigned'}</span>
                     <span>•</span>

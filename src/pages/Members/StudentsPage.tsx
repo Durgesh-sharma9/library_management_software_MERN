@@ -21,7 +21,9 @@ import {
   DollarSign,
   AlertCircle,
   Hash,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { memberService, masterService, assignmentService } from '../../services/api';
 import { Member, SchoolClass, SchoolSection } from '../../types';
 import { Modal } from '../../components/Modal';
@@ -337,6 +339,60 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({ initialFilter }) => 
     }
   };
 
+  const handleExportStudentsExcel = () => {
+    try {
+      if (students.length === 0) {
+        setFeedbackMessage({ type: 'error', text: 'No students found to export.' });
+        return;
+      }
+
+      const exportData = students.map((s, idx) => ({
+        'S.No': idx + 1,
+        'Member ID': s.memberId,
+        'Full Name': s.name,
+        'Admission No': s.admissionNo || 'N/A',
+        'Class': s.className || 'N/A',
+        'Section': s.section || 'N/A',
+        'WhatsApp / Contact': s.whatsapp,
+        'Email Address': s.email || 'N/A',
+        'Status': s.status === 'active' ? 'Active' : 'Inactive',
+        'Currently Assigned Books': s.assignedBooksCount || 0,
+        'Overdue Books': s.overdueBooksCount || 0,
+        'Pending Fine (Rs)': s.pendingFine || 0,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const colWidths = [
+        { wch: 8 },  // S.No
+        { wch: 18 }, // Member ID
+        { wch: 24 }, // Name
+        { wch: 18 }, // Admission No
+        { wch: 12 }, // Class
+        { wch: 12 }, // Section
+        { wch: 20 }, // WhatsApp
+        { wch: 24 }, // Email
+        { wch: 12 }, // Status
+        { wch: 18 }, // Assigned
+        { wch: 16 }, // Overdue
+        { wch: 16 }, // Fine
+      ];
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Students_Roster');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Library_Students_Directory_${timestamp}.xlsx`);
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Exported ${exportData.length} students successfully to Excel file!`,
+      });
+    } catch (err: any) {
+      console.error('Export students error:', err);
+      setFeedbackMessage({ type: 'error', text: 'Failed to export students to Excel.' });
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Feedback Banner */}
@@ -382,6 +438,17 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({ initialFilter }) => 
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span>Excel Import</span>
+            </button>
+
+            <button
+              id="export-students-btn"
+              type="button"
+              onClick={handleExportStudentsExcel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-xl border border-indigo-200 transition-all shadow-2xs cursor-pointer"
+              title="Download students roster as Excel spreadsheet"
+            >
+              <Download className="w-4 h-4 text-indigo-600" />
+              <span>Export Excel</span>
             </button>
 
             <button

@@ -1949,6 +1949,22 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
                       <strong className="text-slate-800">Language:</strong>{' '}
                       {activeBookDossier.book.language || 'English'}
                     </span>
+                    {activeBookDossier.book.publicationYear && (
+                      <>
+                        <span>•</span>
+                        <span>
+                          <strong className="text-slate-800">Year:</strong> {activeBookDossier.book.publicationYear}
+                        </span>
+                      </>
+                    )}
+                    {activeBookDossier.book.pages !== undefined && activeBookDossier.book.pages !== null && activeBookDossier.book.pages > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>
+                          <strong className="text-slate-800">Pages:</strong> {activeBookDossier.book.pages}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {activeBookDossier.book.publisherNumber && (

@@ -31,6 +31,8 @@ interface ParsedBookRow {
   language: string;
   publisher: string;
   publisherNumber: string;
+  pages?: number;
+  publicationYear?: string;
   price?: number;
   supplier?: string;
   shelfLocation?: string;
@@ -88,6 +90,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
         'Shelf Location': 'Shelf A-1',
         Publisher: 'National Book Trust',
         'Book ISBN / No': '978-812370001',
+        'No of Pages (Optional)': 180,
+        'Publication Year (Optional)': '2022',
       },
       {
         'Accession No (Optional)': 'ACC-1002',
@@ -102,6 +106,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
         'Shelf Location': 'Shelf B-2',
         Publisher: 'NCERT',
         'Book ISBN / No': '978-817450002',
+        'No of Pages (Optional)': 320,
+        'Publication Year (Optional)': '2024',
       },
       {
         'Accession No (Optional)': '',
@@ -116,6 +122,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
         'Shelf Location': 'Shelf C-1',
         Publisher: 'Universities Press',
         'Book ISBN / No': '978-817371146',
+        'No of Pages (Optional)': 200,
+        'Publication Year (Optional)': '2021',
       },
       {
         'Accession No (Optional)': '',
@@ -130,6 +138,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
         'Shelf Location': 'Shelf A-2',
         Publisher: 'Lokbharti Prakashan',
         'Book ISBN / No': '978-818534001',
+        'No of Pages (Optional)': 280,
+        'Publication Year (Optional)': '2020',
       },
     ];
 
@@ -149,6 +159,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
       { wch: 18 }, // Shelf Location
       { wch: 24 }, // Publisher
       { wch: 20 }, // ISBN
+      { wch: 20 }, // Pages
+      { wch: 22 }, // Publication Year
     ];
     worksheet['!cols'] = colWidths;
 
@@ -289,6 +301,29 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
             .toString()
             .trim();
 
+          const rawPages =
+            row['No of Pages (Optional)'] ||
+            row['No of Pages'] ||
+            row['Pages'] ||
+            row['pages'] ||
+            row['Total Pages'] ||
+            row['Page Count'] ||
+            0;
+          let pages = parseInt(rawPages, 10);
+          if (isNaN(pages) || pages <= 0) pages = 0;
+
+          const publicationYear = (
+            row['Publication Year (Optional)'] ||
+            row['Publication Year'] ||
+            row['Year of Publication'] ||
+            row['publicationYear'] ||
+            row['Year'] ||
+            row['year'] ||
+            ''
+          )
+            .toString()
+            .trim();
+
           const rawPrice =
             row['Price (Rs)'] ||
             row['Price'] ||
@@ -345,6 +380,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
             language,
             publisher,
             publisherNumber,
+            pages: pages > 0 ? pages : undefined,
+            publicationYear: publicationYear || undefined,
             price: price > 0 ? price : undefined,
             supplier: supplier || undefined,
             shelfLocation: shelfLocation || undefined,
@@ -427,6 +464,8 @@ export const BulkImportBooksModal: React.FC<BulkImportBooksModalProps> = ({
         language: r.language,
         publisher: r.publisher,
         publisherNumber: r.publisherNumber,
+        pages: r.pages,
+        publicationYear: r.publicationYear,
         price: r.price,
         supplier: r.supplier,
         shelfLocation: r.shelfLocation,

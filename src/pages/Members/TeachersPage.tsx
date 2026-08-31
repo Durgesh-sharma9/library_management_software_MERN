@@ -20,7 +20,9 @@ import {
   DollarSign,
   Building2,
   Award,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { memberService, assignmentService } from '../../services/api';
 import { Member } from '../../types';
 import { Modal } from '../../components/Modal';
@@ -334,19 +336,74 @@ export const TeachersPage: React.FC = () => {
 
   const departmentList = ['Science', 'Mathematics', 'Languages', 'Social Studies', 'Commerce', 'Computer Science', 'Sports & Arts', 'Administration'];
 
+  const handleExportTeachersExcel = () => {
+    try {
+      if (teachers.length === 0) {
+        setFeedbackMessage({ type: 'error', text: 'No teachers found to export.' });
+        return;
+      }
+
+      const exportData = teachers.map((t, idx) => ({
+        'S.No': idx + 1,
+        'Staff ID': t.memberId,
+        'Teacher Name': t.name,
+        'Designation': t.designation || 'N/A',
+        'Department / Subject': t.department || 'N/A',
+        'WhatsApp / Contact': t.whatsapp,
+        'Email Address': t.email || 'N/A',
+        'Status': t.status === 'active' ? 'Active' : 'Inactive',
+        'Currently Assigned Books': t.assignedBooksCount || 0,
+        'Overdue Books': t.overdueBooksCount || 0,
+        'Pending Fine (Rs)': t.pendingFine || 0,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const colWidths = [
+        { wch: 8 },  // S.No
+        { wch: 18 }, // Staff ID
+        { wch: 24 }, // Name
+        { wch: 20 }, // Designation
+        { wch: 22 }, // Department
+        { wch: 20 }, // WhatsApp
+        { wch: 24 }, // Email
+        { wch: 12 }, // Status
+        { wch: 18 }, // Assigned
+        { wch: 16 }, // Overdue
+        { wch: 16 }, // Fine
+      ];
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Teachers_Roster');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Library_Teachers_Directory_${timestamp}.xlsx`);
+
+      setFeedbackMessage({
+        type: 'success',
+        text: `Exported ${exportData.length} teachers/faculty successfully to Excel file!`,
+      });
+    } catch (err: any) {
+      console.error('Export teachers error:', err);
+      setFeedbackMessage({ type: 'error', text: 'Failed to export teachers to Excel.' });
+    }
+  };
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Feedback Banner */}
+    <div className="space-y-6">
       {feedbackMessage && (
         <div
-          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
+          className={`p-4 rounded-xl flex items-center justify-between shadow-xs ${
             feedbackMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border-rose-200'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-800'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            {feedbackMessage.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <X className="w-4 h-4 text-rose-600" />
+            )}
             <span>{feedbackMessage.text}</span>
           </div>
           <button
@@ -372,15 +429,26 @@ export const TeachersPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               id="bulk-import-teachers-btn"
               type="button"
               onClick={() => setIsBulkImportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 transition-colors cursor-pointer"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span>Excel Import</span>
+            </button>
+
+            <button
+              id="export-teachers-btn"
+              type="button"
+              onClick={handleExportTeachersExcel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-xl border border-indigo-200 transition-colors cursor-pointer"
+              title="Download teachers roster as Excel spreadsheet"
+            >
+              <Download className="w-4 h-4 text-indigo-600" />
+              <span>Export Excel</span>
             </button>
 
             <button

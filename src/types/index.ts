@@ -180,6 +180,8 @@ export interface Book {
   language: 'Hindi' | 'English' | 'Other';
   publisher?: string;
   publisherNumber?: string;
+  pages?: number;
+  publicationYear?: string;
   category: BookCategory | string;
   subCategory?: string;
   price?: number;
