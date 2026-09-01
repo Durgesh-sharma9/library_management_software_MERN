@@ -572,61 +572,61 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
         </div>
       </div>
 
-      {/* Summary KPI Cards (Returned box removed, clean Active Students & Active Teachers labels) */}
+      {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#EFF6FF] p-4 rounded-2xl border border-[#BFDBFE] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Active Students</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Active Students</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20">
               <GraduationCap className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-blue-700 mt-2">{metrics.studentActiveIssued}</p>
-          <span className="text-[10px] text-blue-500 font-medium">Active Students</span>
+          <p className="text-2xl font-extrabold text-blue-950 mt-2">{metrics.studentActiveIssued}</p>
+          <span className="text-[10px] text-blue-700 font-semibold mt-1">Active Students Borrowing</span>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#EEF2FF] p-4 rounded-2xl border border-[#C7D2FE] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Active Teachers</span>
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Active Teachers</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shadow-indigo-500/20">
               <Briefcase className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-indigo-700 mt-2">{metrics.teacherActiveIssued}</p>
-          <span className="text-[10px] text-indigo-500 font-medium">Active Teachers</span>
+          <p className="text-2xl font-extrabold text-indigo-950 mt-2">{metrics.teacherActiveIssued}</p>
+          <span className="text-[10px] text-indigo-700 font-semibold mt-1">Faculty Members Borrowing</span>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FFF1F2] p-4 rounded-2xl border border-[#FECDD3] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Overdue</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">Overdue</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs shadow-rose-500/20">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-rose-700 mt-2">{metrics.overdueCount}</p>
-          <span className="text-[10px] text-rose-500 font-medium">Past designated due date</span>
+          <p className="text-2xl font-extrabold text-rose-950 mt-2">{metrics.overdueCount}</p>
+          <span className="text-[10px] text-rose-700 font-semibold mt-1">Past designated due date</span>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#ECFDF5] p-4 rounded-2xl border border-[#A7F3D0] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Fines Paid</span>
-            <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Fines Paid</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shadow-emerald-500/20">
               <IndianRupee className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-teal-700 mt-2">{formatCurrency(metrics.totalFineCollected)}</p>
-          <span className="text-[10px] text-teal-600 font-medium">Collected in full</span>
+          <p className="text-2xl font-extrabold text-emerald-950 mt-2">{formatCurrency(metrics.totalFineCollected)}</p>
+          <span className="text-[10px] text-emerald-700 font-semibold mt-1">Collected in full</span>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FFFBEB] p-4 rounded-2xl border border-[#FDE68A] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Pending Fines</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Pending Fines</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs shadow-amber-500/20">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-amber-700 mt-2">{formatCurrency(metrics.totalFinePending)}</p>
-          <span className="text-[10px] text-amber-600 font-medium">Due from late returns</span>
+          <p className="text-2xl font-extrabold text-amber-950 mt-2">{formatCurrency(metrics.totalFinePending)}</p>
+          <span className="text-[10px] text-amber-700 font-semibold mt-1">Due from late returns</span>
         </div>
       </div>
 

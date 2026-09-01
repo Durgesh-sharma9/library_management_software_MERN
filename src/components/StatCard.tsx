@@ -24,58 +24,85 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const colorStyles = {
     blue: {
-      text: 'text-slate-900',
-      badge: 'bg-sky-50/90 text-sky-700 border border-sky-200/60',
-      iconBg: 'bg-sky-50 text-sky-600 border border-sky-100',
-      cardHover: 'hover:border-sky-200 hover:bg-sky-50/20',
+      cardBg: 'bg-[#EFF6FF] border-[#BFDBFE] hover:border-blue-400 hover:shadow-blue-100',
+      text: 'text-blue-950',
+      title: 'text-blue-700',
+      subtitle: 'text-blue-600/80',
+      badge: 'bg-blue-100 text-blue-800 border-blue-200',
+      iconBg: 'bg-blue-600 text-white shadow-xs shadow-blue-500/30',
+      borderSep: 'border-blue-200/60',
     },
     emerald: {
-      text: 'text-slate-900',
-      badge: 'bg-emerald-50/90 text-emerald-700 border border-emerald-200/60',
-      iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-      cardHover: 'hover:border-emerald-200 hover:bg-emerald-50/20',
+      cardBg: 'bg-[#ECFDF5] border-[#A7F3D0] hover:border-emerald-400 hover:shadow-emerald-100',
+      text: 'text-emerald-950',
+      title: 'text-emerald-700',
+      subtitle: 'text-emerald-600/80',
+      badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      iconBg: 'bg-emerald-600 text-white shadow-xs shadow-emerald-500/30',
+      borderSep: 'border-emerald-200/60',
     },
     amber: {
-      text: 'text-slate-900',
-      badge: 'bg-amber-50/90 text-amber-800 border border-amber-200/60',
-      iconBg: 'bg-amber-50 text-amber-600 border border-amber-100',
-      cardHover: 'hover:border-amber-200 hover:bg-amber-50/20',
+      cardBg: 'bg-[#FFFBEB] border-[#FDE68A] hover:border-amber-400 hover:shadow-amber-100',
+      text: 'text-amber-950',
+      title: 'text-amber-700',
+      subtitle: 'text-amber-600/80',
+      badge: 'bg-amber-100 text-amber-900 border-amber-200',
+      iconBg: 'bg-amber-500 text-white shadow-xs shadow-amber-500/30',
+      borderSep: 'border-amber-200/60',
     },
     rose: {
-      text: 'text-slate-900',
-      badge: 'bg-rose-50/90 text-rose-700 border border-rose-200/60',
-      iconBg: 'bg-rose-50 text-rose-600 border border-rose-100',
-      cardHover: 'hover:border-rose-200 hover:bg-rose-50/20',
+      cardBg: 'bg-[#FFF1F2] border-[#FECDD3] hover:border-rose-400 hover:shadow-rose-100',
+      text: 'text-rose-950',
+      title: 'text-rose-700',
+      subtitle: 'text-rose-600/80',
+      badge: 'bg-rose-100 text-rose-800 border-rose-200',
+      iconBg: 'bg-rose-500 text-white shadow-xs shadow-rose-500/30',
+      borderSep: 'border-rose-200/60',
     },
     purple: {
-      text: 'text-slate-900',
-      badge: 'bg-purple-50/90 text-purple-700 border border-purple-200/60',
-      iconBg: 'bg-purple-50 text-purple-600 border border-purple-100',
-      cardHover: 'hover:border-purple-200 hover:bg-purple-50/20',
+      cardBg: 'bg-[#FAF5FF] border-[#E9D5FF] hover:border-purple-400 hover:shadow-purple-100',
+      text: 'text-purple-950',
+      title: 'text-purple-700',
+      subtitle: 'text-purple-600/80',
+      badge: 'bg-purple-100 text-purple-800 border-purple-200',
+      iconBg: 'bg-purple-600 text-white shadow-xs shadow-purple-500/30',
+      borderSep: 'border-purple-200/60',
     },
     indigo: {
-      text: 'text-slate-900',
-      badge: 'bg-indigo-50/90 text-indigo-700 border border-indigo-200/60',
-      iconBg: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
-      cardHover: 'hover:border-indigo-200 hover:bg-indigo-50/20',
+      cardBg: 'bg-[#EEF2FF] border-[#C7D2FE] hover:border-indigo-400 hover:shadow-indigo-100',
+      text: 'text-indigo-950',
+      title: 'text-indigo-700',
+      subtitle: 'text-indigo-600/80',
+      badge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      iconBg: 'bg-indigo-600 text-white shadow-xs shadow-indigo-500/30',
+      borderSep: 'border-indigo-200/60',
     },
     sky: {
-      text: 'text-slate-900',
-      badge: 'bg-sky-50/90 text-sky-700 border border-sky-200/60',
-      iconBg: 'bg-sky-50 text-sky-600 border border-sky-100',
-      cardHover: 'hover:border-sky-200 hover:bg-sky-50/20',
+      cardBg: 'bg-[#F0F9FF] border-[#BAE6FD] hover:border-sky-400 hover:shadow-sky-100',
+      text: 'text-sky-950',
+      title: 'text-sky-700',
+      subtitle: 'text-sky-600/80',
+      badge: 'bg-sky-100 text-sky-800 border-sky-200',
+      iconBg: 'bg-sky-500 text-white shadow-xs shadow-sky-500/30',
+      borderSep: 'border-sky-200/60',
     },
     teal: {
-      text: 'text-slate-900',
-      badge: 'bg-teal-50/90 text-teal-700 border border-teal-200/60',
-      iconBg: 'bg-teal-50 text-teal-600 border border-teal-100',
-      cardHover: 'hover:border-teal-200 hover:bg-teal-50/20',
+      cardBg: 'bg-[#F0FDFA] border-[#99F6E4] hover:border-teal-400 hover:shadow-teal-100',
+      text: 'text-teal-950',
+      title: 'text-teal-700',
+      subtitle: 'text-teal-600/80',
+      badge: 'bg-teal-100 text-teal-800 border-teal-200',
+      iconBg: 'bg-teal-600 text-white shadow-xs shadow-teal-500/30',
+      borderSep: 'border-teal-200/60',
     },
     slate: {
+      cardBg: 'bg-[#F8FAFC] border-[#E2E8F0] hover:border-slate-400 hover:shadow-slate-100',
       text: 'text-slate-900',
-      badge: 'bg-slate-100 text-slate-700 border border-slate-200/60',
-      iconBg: 'bg-slate-100 text-slate-600 border border-slate-200/60',
-      cardHover: 'hover:border-slate-300 hover:bg-slate-50/40',
+      title: 'text-slate-600',
+      subtitle: 'text-slate-500',
+      badge: 'bg-slate-200 text-slate-700 border-slate-300',
+      iconBg: 'bg-slate-700 text-white shadow-xs shadow-slate-500/30',
+      borderSep: 'border-slate-200',
     },
   };
 
@@ -85,30 +112,30 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div
       id={id}
       onClick={onClick}
-      className={`relative overflow-hidden bg-white px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between transition-all duration-150 ${
-        scheme.cardHover
-      } ${onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+      className={`relative overflow-hidden ${scheme.cardBg} p-4 sm:p-5 rounded-2xl border shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md ${
+        onClick ? 'cursor-pointer hover:-translate-y-1' : ''
+      }`}
     >
       <div>
-        <div className="flex items-center justify-between gap-1.5">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-[11px] sm:text-xs font-bold uppercase tracking-wider truncate ${scheme.title}`}>
             {title}
           </span>
-          <div className={`p-1.5 rounded-lg shrink-0 ${scheme.iconBg}`}>
-            <Icon className="w-3.5 h-3.5" />
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${scheme.iconBg}`}>
+            <Icon className="w-4 h-4" />
           </div>
         </div>
-        <div className={`text-xl sm:text-2xl font-bold mt-0.5 tracking-tight ${scheme.text}`}>
+        <div className={`text-2xl sm:text-3xl font-extrabold mt-2 tracking-tight ${scheme.text}`}>
           {value !== undefined && value !== null ? value : 0}
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-1 pt-1.5 border-t border-slate-100">
+      <div className={`mt-3 flex items-center justify-between gap-1 pt-2.5 border-t ${scheme.borderSep}`}>
         {subtitle && (
-          <span className="text-[10px] text-slate-400 font-medium truncate">{subtitle}</span>
+          <span className={`text-[11px] font-semibold truncate ${scheme.subtitle}`}>{subtitle}</span>
         )}
         {badgeText && (
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${scheme.badge}`}>
+          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${scheme.badge}`}>
             {badgeText}
           </span>
         )}

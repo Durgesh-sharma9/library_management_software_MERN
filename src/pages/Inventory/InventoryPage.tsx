@@ -357,57 +357,69 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ onNavigateTab }) =
 
       {/* SUMMARY STATS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Books</span>
-            <BookOpen className="w-4 h-4 text-indigo-500" />
+        <div className="p-4 bg-[#EEF2FF] rounded-2xl border border-[#C7D2FE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-indigo-700 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Total Titles</span>
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <BookOpen className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-slate-900">{summary.totalTitles}</div>
-          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{summary.totalItems} Total Physical Copies</div>
+          <div className="text-2xl font-black text-indigo-950 mt-1">{summary.totalTitles}</div>
+          <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">{summary.totalItems} Physical Copies</div>
         </div>
 
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-emerald-600 mb-1">
+        <div className="p-4 bg-[#ECFDF5] rounded-2xl border border-[#A7F3D0] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-emerald-700 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Available</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-emerald-700">{summary.availableCount}</div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Ready for Issue on Shelf</div>
+          <div className="text-2xl font-black text-emerald-950 mt-1">{summary.availableCount}</div>
+          <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">Ready for Issue on Shelf</div>
         </div>
 
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-blue-600 mb-1">
+        <div className="p-4 bg-[#EFF6FF] rounded-2xl border border-[#BFDBFE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-blue-700 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Issued</span>
-            <Users className="w-4 h-4 text-blue-500" />
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <Users className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-blue-700">{summary.assignedCount}</div>
-          <div className="text-[10px] text-blue-600 font-semibold mt-0.5">With Students / Faculty</div>
+          <div className="text-2xl font-black text-blue-950 mt-1">{summary.assignedCount}</div>
+          <div className="text-[10px] text-blue-700 font-semibold mt-0.5">With Students / Faculty</div>
         </div>
 
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-amber-600 mb-1">
+        <div className="p-4 bg-[#FFFBEB] rounded-2xl border border-[#FDE68A] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-amber-700 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Damaged</span>
-            <ShieldAlert className="w-4 h-4 text-amber-500" />
+            <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-xs">
+              <ShieldAlert className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-amber-700">{summary.damagedCount}</div>
-          <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Recorded Repairs/Damage</div>
+          <div className="text-2xl font-black text-amber-950 mt-1">{summary.damagedCount}</div>
+          <div className="text-[10px] text-amber-700 font-semibold mt-0.5">Recorded Repairs/Damage</div>
         </div>
 
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-rose-600 mb-1">
+        <div className="p-4 bg-[#FFF1F2] rounded-2xl border border-[#FECDD3] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-rose-700 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Lost Copies</span>
-            <AlertTriangle className="w-4 h-4 text-rose-500" />
+            <div className="w-7 h-7 rounded-lg bg-rose-500 text-white flex items-center justify-center shadow-xs">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-rose-700">{summary.lostCount}</div>
-          <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Deducted Stock Copies</div>
+          <div className="text-2xl font-black text-rose-950 mt-1">{summary.lostCount}</div>
+          <div className="text-[10px] text-rose-700 font-semibold mt-0.5">Deducted Stock Copies</div>
         </div>
 
-        <div className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50/60 rounded-2xl border border-purple-200/80 shadow-2xs">
+        <div className="p-4 bg-[#FAF5FF] rounded-2xl border border-[#E9D5FF] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-purple-700 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Stock Valuation</span>
-            <DollarSign className="w-4 h-4 text-purple-600" />
+            <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
+              <DollarSign className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="text-xl font-black text-purple-900">₹{summary.totalWorth.toLocaleString('en-IN')}</div>
+          <div className="text-2xl font-black text-purple-950 mt-1">₹{summary.totalWorth.toLocaleString('en-IN')}</div>
           <div className="text-[10px] text-purple-700 font-semibold mt-0.5">Total Physical Asset Value</div>
         </div>
       </div>

@@ -756,75 +756,75 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total Lost */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FFF1F2] p-4 rounded-2xl border border-[#FECDD3] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Lost Copies</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">Lost Copies</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs shadow-rose-500/20">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-rose-600 mt-2">{stats?.totalLostCopies || 0}</p>
-          <span className="text-[10px] text-slate-500 font-medium">Deducted from stock</span>
+          <p className="text-2xl font-extrabold text-rose-950 mt-2">{stats?.totalLostCopies || 0}</p>
+          <span className="text-[10px] text-rose-700 font-semibold mt-1">Deducted from stock</span>
         </div>
 
         {/* Total Damaged */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FFFBEB] p-4 rounded-2xl border border-[#FDE68A] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Damaged Copies</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Damaged Copies</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs shadow-amber-500/20">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600 mt-2">{stats?.totalDamagedCopies || 0}</p>
-          <span className="text-[10px] text-slate-500 font-medium">Recorded damages</span>
+          <p className="text-2xl font-extrabold text-amber-950 mt-2">{stats?.totalDamagedCopies || 0}</p>
+          <span className="text-[10px] text-amber-700 font-semibold mt-1">Recorded damages</span>
         </div>
 
         {/* Total Incidents */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#EFF6FF] p-4 rounded-2xl border border-[#BFDBFE] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Incidents</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Total Incidents</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-2">{stats?.totalIncidents || logs.length}</p>
-          <span className="text-[10px] text-slate-500 font-medium">Audit log entries</span>
+          <p className="text-2xl font-extrabold text-blue-950 mt-2">{stats?.totalIncidents || logs.length}</p>
+          <span className="text-[10px] text-blue-700 font-semibold mt-1">Audit log entries</span>
         </div>
 
         {/* Fines Assessed */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FAF5FF] p-4 rounded-2xl border border-[#E9D5FF] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Fines Assessed</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800">Fines Assessed</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs shadow-purple-500/20">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-purple-700 mt-2">{formatCurrency(stats?.totalFinesAssessed || 0)}</p>
-          <span className="text-[10px] text-purple-500 font-medium">Total penalty billed</span>
+          <p className="text-2xl font-extrabold text-purple-950 mt-2">{formatCurrency(stats?.totalFinesAssessed || 0)}</p>
+          <span className="text-[10px] text-purple-700 font-semibold mt-1">Total penalty billed</span>
         </div>
 
         {/* Fines Collected */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#ECFDF5] p-4 rounded-2xl border border-[#A7F3D0] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Fines Collected</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Fines Collected</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shadow-emerald-500/20">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-700 mt-2">{formatCurrency(stats?.totalFinesCollected || 0)}</p>
-          <span className="text-[10px] text-emerald-600 font-medium">Paid by borrowers</span>
+          <p className="text-2xl font-extrabold text-emerald-950 mt-2">{formatCurrency(stats?.totalFinesCollected || 0)}</p>
+          <span className="text-[10px] text-emerald-700 font-semibold mt-1">Paid by borrowers</span>
         </div>
 
         {/* Pending Fines */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="bg-[#FFF1F2] p-4 rounded-2xl border border-[#FECDD3] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Pending Fines</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">Pending Fines</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs shadow-rose-500/20">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-rose-600 mt-2">{formatCurrency(stats?.pendingFines || 0)}</p>
-          <span className="text-[10px] text-rose-500 font-medium">Due for recovery</span>
+          <p className="text-2xl font-extrabold text-rose-950 mt-2">{formatCurrency(stats?.pendingFines || 0)}</p>
+          <span className="text-[10px] text-rose-700 font-semibold mt-1">Due for recovery</span>
         </div>
       </div>
 

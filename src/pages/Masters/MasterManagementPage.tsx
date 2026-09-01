@@ -538,10 +538,10 @@ export const MasterManagementPage: React.FC<MasterManagementPageProps> = ({ onNa
               setActiveTab('classes');
               setSearchQuery('');
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'classes'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-500/20'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60'
             }`}
           >
             <GraduationCap className="w-4 h-4" />
@@ -556,10 +556,10 @@ export const MasterManagementPage: React.FC<MasterManagementPageProps> = ({ onNa
               setActiveTab('suppliers');
               setSearchQuery('');
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'suppliers'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                ? 'bg-amber-500 text-white shadow-xs shadow-amber-500/20'
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
             }`}
           >
             <Truck className="w-4 h-4" />
@@ -574,10 +574,10 @@ export const MasterManagementPage: React.FC<MasterManagementPageProps> = ({ onNa
               setActiveTab('shelves');
               setSearchQuery('');
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'shelves'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-500/20'
+                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
             }`}
           >
             <Archive className="w-4 h-4" />
@@ -592,10 +592,10 @@ export const MasterManagementPage: React.FC<MasterManagementPageProps> = ({ onNa
               setActiveTab('categories');
               setSearchQuery('');
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'categories'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                ? 'bg-rose-500 text-white shadow-xs shadow-rose-500/20'
+                : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60'
             }`}
           >
             <Layers className="w-4 h-4" />
