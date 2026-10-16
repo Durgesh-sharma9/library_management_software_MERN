@@ -491,9 +491,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             id="sidebar-pwa-btn"
             type="button"
-            onClick={async () => {
-              const installed = await promptInstall();
-              if (!installed) openInstallModal();
+            onClick={() => {
+              promptInstall();
             }}
             title={isInstalled ? 'LibraFlow is Installed' : 'Download & Install LibraFlow PWA'}
             className={`w-full group rounded-xl transition-all cursor-pointer flex items-center ${

@@ -25,8 +25,12 @@ interface PWAContextType {
 const PWAContext = createContext<PWAContextType | undefined>(undefined);
 
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(() => {
+    return typeof window !== 'undefined' ? (window as any).__pwaDeferredPrompt || null : null;
+  });
+  const [isInstallable, setIsInstallable] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? !!(window as any).__pwaDeferredPrompt : false;
+  });
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -57,11 +61,25 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Listen for beforeinstallprompt event
+    // Sync with early captured prompt if available
+    if ((window as any).__pwaDeferredPrompt) {
+      setDeferredPrompt((window as any).__pwaDeferredPrompt);
+      setIsInstallable(true);
+    }
+
+    const handleDeferredPromptReady = () => {
+      if ((window as any).__pwaDeferredPrompt) {
+        setDeferredPrompt((window as any).__pwaDeferredPrompt);
+        setIsInstallable(true);
+      }
+    };
+    window.addEventListener('pwa-deferred-prompt-ready', handleDeferredPromptReady);
+
+    // Listen for beforeinstallprompt event directly
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent default mini-infobar from appearing on mobile
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
+      (window as any).__pwaDeferredPrompt = promptEvent;
       setDeferredPrompt(promptEvent);
       setIsInstallable(true);
     };
@@ -71,6 +89,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
+      (window as any).__pwaDeferredPrompt = null;
       setShowInstallModal(false);
       console.log('🎉 LibraFlow PWA was installed successfully!');
     };
@@ -112,33 +131,35 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('pwa-deferred-prompt-ready', handleDeferredPromptReady);
     };
   }, []);
 
   // Trigger installation prompt
   const promptInstall = useCallback(async (): Promise<boolean> => {
-    if (!deferredPrompt) {
-      // Fallback: If no deferred prompt is available (e.g. iOS or Chrome menu mode), open the guided modal
-      setShowInstallModal(true);
-      return false;
+    const prompt = deferredPrompt || (window as any).__pwaDeferredPrompt;
+
+    if (prompt) {
+      try {
+        await prompt.prompt();
+        const choice = await prompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          setIsInstalled(true);
+          setIsInstallable(false);
+          setDeferredPrompt(null);
+          (window as any).__pwaDeferredPrompt = null;
+          setShowInstallModal(false);
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error('PWA install prompt error:', err);
+      }
     }
 
-    try {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setIsInstalled(true);
-        setIsInstallable(false);
-        setDeferredPrompt(null);
-        setShowInstallModal(false);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('PWA install prompt error:', err);
-      setShowInstallModal(true);
-      return false;
-    }
+    // Only fallback to guided modal if the browser has no native install prompt available (e.g. iOS Safari)
+    setShowInstallModal(true);
+    return false;
   }, [deferredPrompt]);
 
   const openInstallModal = useCallback(() => setShowInstallModal(true), []);

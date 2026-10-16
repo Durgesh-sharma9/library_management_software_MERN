@@ -151,7 +151,7 @@ export const PWAInstallModal: React.FC = () => {
               </div>
 
               {/* Native Prompt Trigger Button (Chrome/Edge/Android) */}
-              {isInstallable && (
+              {(isInstallable || (typeof window !== 'undefined' && !!(window as any).__pwaDeferredPrompt)) && (
                 <button
                   type="button"
                   onClick={async () => {

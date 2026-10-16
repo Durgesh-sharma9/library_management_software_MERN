@@ -2004,9 +2004,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
                 <div className="shrink-0 flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={async () => {
-                      const installed = await promptInstall();
-                      if (!installed) openInstallModal();
+                    onClick={() => {
+                      promptInstall();
                     }}
                     className="w-full sm:w-auto px-5 py-3 bg-white hover:bg-slate-50 text-indigo-900 font-extrabold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-black/20 hover:scale-[1.02] active:scale-95"
                   >

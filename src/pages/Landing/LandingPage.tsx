@@ -226,9 +226,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
 
           <button
             id="hero-download-pwa-btn"
-            onClick={async () => {
-              const installed = await promptInstall();
-              if (!installed) openInstallModal();
+            onClick={() => {
+              promptInstall();
             }}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-bold text-indigo-200 hover:text-white bg-indigo-950/70 hover:bg-indigo-900/90 border border-indigo-500/40 hover:border-indigo-400 transition-all cursor-pointer shadow-lg shadow-indigo-950/50"
           >
@@ -1008,9 +1007,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
         <button
           id="sticky-bottom-pwa-btn"
           type="button"
-          onClick={async () => {
-            const installed = await promptInstall();
-            if (!installed) openInstallModal();
+          onClick={() => {
+            promptInstall();
           }}
           title={isInstalled ? 'LibraFlow PWA is Installed' : 'Download & Install LibraFlow PWA'}
           className="group flex items-center gap-2.5 pl-3 pr-4 py-2 sm:pl-3.5 sm:pr-4 sm:py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-indigo-500/50 hover:border-indigo-400 shadow-2xl shadow-indigo-950/80 backdrop-blur-xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-white/10"

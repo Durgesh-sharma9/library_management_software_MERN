@@ -91,9 +91,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="header-install-pwa-btn"
             type="button"
-            onClick={async () => {
-              const installed = await promptInstall();
-              if (!installed) openInstallModal();
+            onClick={() => {
+              promptInstall();
             }}
             title="Download & Install LibraFlow PWA"
             className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl transition-all duration-200 shadow-xs hover:shadow-indigo-500/20 cursor-pointer group active:scale-95"
