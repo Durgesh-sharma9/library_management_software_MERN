@@ -1,10 +1,10 @@
 import nodemailer from 'nodemailer';
 
 const createTransporter = () => {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER || 'ss6587493@gmail.com';
-  const pass = process.env.SMTP_PASS || 'gxxtesjbcrnevlqp';
+  const host = process.env.SMTP_HOST || 'mail.webncode.in';
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const user = process.env.SMTP_USER || 'librarypro@webncode.in';
+  const pass = process.env.SMTP_PASS || 'Webncode2026@hostycare';
 
   return nodemailer.createTransport({
     host,
@@ -23,7 +23,7 @@ const createTransporter = () => {
 export async function sendVerificationOTPEmail(email: string, otp: string, schoolName: string) {
   try {
     const transporter = createTransporter();
-    const mailFrom = process.env.MAIL_FROM || process.env.SMTP_USER || 'ss6587493@gmail.com';
+    const mailFrom = process.env.MAIL_FROM || process.env.SMTP_USER || 'librarypro@webncode.in';
 
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
