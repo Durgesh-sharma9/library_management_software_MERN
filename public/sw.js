@@ -1,14 +1,14 @@
-const CACHE_NAME = 'libraflow-pwa-v2';
+const CACHE_NAME = 'libraflow-pwa-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/icon-maskable-192x192.png',
-  '/icons/icon-maskable-512x512.png',
-  '/icons/apple-touch-icon.png'
+  '/pwa-icons/icon-192x192.png',
+  '/pwa-icons/icon-512x512.png',
+  '/pwa-icons/icon-maskable-192x192.png',
+  '/pwa-icons/icon-maskable-512x512.png',
+  '/pwa-icons/apple-touch-icon.png'
 ];
 
 // Install Event - Pre-cache essential shell assets
@@ -81,6 +81,7 @@ self.addEventListener('fetch', (event) => {
 
   // 2. Static assets (images, fonts, stylesheets, manifest, scripts) -> Stale-While-Revalidate or Cache first
   if (
+    url.pathname.startsWith('/pwa-icons/') ||
     url.pathname.startsWith('/icons/') ||
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.svg') ||

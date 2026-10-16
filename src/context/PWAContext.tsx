@@ -137,7 +137,20 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Trigger installation prompt
   const promptInstall = useCallback(async (): Promise<boolean> => {
-    const prompt = deferredPrompt || (window as any).__pwaDeferredPrompt;
+    let prompt = deferredPrompt || (window as any).__pwaDeferredPrompt;
+
+    // If prompt is not yet captured, give it up to 600ms in case the event is just about to arrive
+    if (!prompt) {
+      for (let i = 0; i < 6; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        prompt = (window as any).__pwaDeferredPrompt;
+        if (prompt) {
+          setDeferredPrompt(prompt);
+          setIsInstallable(true);
+          break;
+        }
+      }
+    }
 
     if (prompt) {
       try {

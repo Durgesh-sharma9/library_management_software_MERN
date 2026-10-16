@@ -58,7 +58,7 @@ export const PWAInstallModal: React.FC = () => {
           <div className="flex items-center gap-3.5">
             <div className="w-14 h-14 rounded-2xl bg-white p-1.5 shadow-lg shadow-indigo-950/40 ring-4 ring-white/20 shrink-0 flex items-center justify-center">
               <img
-                src="/icons/icon.svg"
+                src="/pwa-icons/icon.svg"
                 alt="LibraFlow App Icon"
                 className="w-full h-full object-contain rounded-xl"
                 onError={(e) => {
