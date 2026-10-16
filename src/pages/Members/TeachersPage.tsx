@@ -41,6 +41,7 @@ export const TeachersPage: React.FC = () => {
   const [selectedDesignation, setSelectedDesignation] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -464,64 +465,184 @@ export const TeachersPage: React.FC = () => {
         </div>
 
         {/* Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 border-t border-slate-100">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-            <input
-              id="search-teachers-input"
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by Teacher Name, Staff ID..."
-              className="w-full pl-8.5 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:border-indigo-500"
-            />
-          </div>
+        {(() => {
+          const activeFiltersCount =
+            (selectedDesignation !== 'all' ? 1 : 0) +
+            (selectedDepartment !== 'all' ? 1 : 0) +
+            (selectedStatus !== 'all' ? 1 : 0);
 
-          <div>
-            <select
-              id="filter-teacher-designation"
-              value={selectedDesignation}
-              onChange={(e) => setSelectedDesignation(e.target.value)}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
-            >
-              <option value="all">All Designations</option>
-              <option value="PGT">PGT</option>
-              <option value="TGT">TGT</option>
-              <option value="PRT">PRT</option>
-              <option value="NTT">NTT</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
+          return (
+            <div className="space-y-2.5 pt-1 border-t border-slate-100">
+              {/* Mobile Search & Filter Toggle */}
+              <div className="flex sm:hidden items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    id="search-teachers-input-mobile"
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search name, staff ID..."
+                    className="w-full pl-8.5 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:border-indigo-500"
+                  />
+                </div>
 
-          <div>
-            <select
-              id="filter-teacher-department"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
-            >
-              <option value="all">All Departments</option>
-              {departmentList.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                    showMobileFilters || activeFiltersCount > 0
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Filters</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+              </div>
 
-          <div>
-            <select
-              id="filter-teacher-status"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active Faculty</option>
-              <option value="inactive">Inactive / On Leave</option>
-            </select>
-          </div>
-        </div>
+              {/* Mobile Filter Panel */}
+              {showMobileFilters && (
+                <div className="sm:hidden p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200 text-xs font-bold text-slate-700">
+                    <span>Filter Faculty</span>
+                    {activeFiltersCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDesignation('all');
+                          setSelectedDepartment('all');
+                          setSelectedStatus('all');
+                        }}
+                        className="text-rose-600 hover:underline text-[11px]"
+                      >
+                        Reset All
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Designation
+                    </label>
+                    <select
+                      value={selectedDesignation}
+                      onChange={(e) => setSelectedDesignation(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-xl text-xs text-slate-700"
+                    >
+                      <option value="all">All Designations</option>
+                      <option value="PGT">PGT</option>
+                      <option value="TGT">TGT</option>
+                      <option value="PRT">PRT</option>
+                      <option value="NTT">NTT</option>
+                      <option value="Others">Others</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        Department
+                      </label>
+                      <select
+                        value={selectedDepartment}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-xl text-xs text-slate-700"
+                      >
+                        <option value="all">All Departments</option>
+                        {departmentList.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-xl text-xs text-slate-700"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active Faculty</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Filter Row */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    id="search-teachers-input"
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by Teacher Name, Staff ID..."
+                    className="w-full pl-8.5 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <select
+                    id="filter-teacher-designation"
+                    value={selectedDesignation}
+                    onChange={(e) => setSelectedDesignation(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="all">All Designations</option>
+                    <option value="PGT">PGT</option>
+                    <option value="TGT">TGT</option>
+                    <option value="PRT">PRT</option>
+                    <option value="NTT">NTT</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    id="filter-teacher-department"
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="all">All Departments</option>
+                    {departmentList.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    id="filter-teacher-status"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Faculty</option>
+                    <option value="inactive">Inactive / On Leave</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Teachers Table */}
@@ -536,7 +657,111 @@ export const TeachersPage: React.FC = () => {
         />
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Cards View (< md screens) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {teachers.map((teacher) => (
+              <div key={teacher._id} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
+                      {teacher.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{teacher.name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 text-[10px]">
+                          Staff ID: {teacher.memberId}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Badge variant={teacher.status === 'active' ? 'success' : 'neutral'} size="sm">
+                    {teacher.status.toUpperCase()}
+                  </Badge>
+                </div>
+
+                {/* Designation, Department & Contact */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/80 rounded-xl p-2.5 border border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Designation & Dept</span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {teacher.designation || 'Faculty'} • {teacher.department || 'Academics'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Contact WhatsApp</span>
+                    <a
+                      href={`https://wa.me/${(teacher.whatsapp || '').replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-indigo-700 hover:underline flex items-center gap-1 text-xs"
+                    >
+                      <Phone className="w-3 h-3 text-indigo-500" />
+                      <span>{teacher.whatsapp}</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Active Books & Fine Badges */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">Active Books:</span>
+                    <span className="font-black text-slate-900">{teacher.assignedBooksCount || 0}</span>
+                    {teacher.overdueBooksCount ? (
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded-full border border-rose-200">
+                        {teacher.overdueBooksCount} Overdue
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-slate-500 font-semibold">Fine:</span>
+                    {(teacher.pendingFine || 0) > 0 ? (
+                      <span className="font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 text-[11px]">
+                        {formatCurrency(teacher.pendingFine || 0)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-medium text-[11px]">₹0</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenProfileModal(teacher)}
+                    className="flex-1 py-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-purple-800 border border-purple-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1"
+                  >
+                    <span>Profile & History</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditModal(teacher)}
+                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl"
+                    title="Edit Teacher"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTeacher(teacher)}
+                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-xl"
+                    title="Delete Teacher"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-semibold">

@@ -88,6 +88,7 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
   const [datePreset, setDatePreset] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
 
   // View Mode: 'all-logs' | 'student-wise' | 'book-wise'
   const [viewMode, setViewMode] = useState<'all-logs' | 'student-wise' | 'book-wise'>('all-logs');
@@ -677,64 +678,177 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
       {/* FILTER CONTROLS CARD */}
       <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-2xs space-y-4">
         {/* Row 1: Search & Dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search student, book, author, ID..."
-              className="w-full pl-9 pr-7 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-hidden transition-colors"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+        {(() => {
+          const filterCount =
+            (selectedMember !== 'all' ? 1 : 0) +
+            (selectedBook !== 'all' ? 1 : 0) +
+            (selectedCategory !== 'all' ? 1 : 0);
 
-          {/* Student Filter */}
-          <div className="text-xs">
-            <SearchableSelect
-              options={memberOptions}
-              value={selectedMember}
-              onChange={setSelectedMember}
-              placeholder="Filter by Student..."
-            />
-          </div>
+          return (
+            <div className="space-y-3">
+              {/* Mobile Search & Filter Button */}
+              <div className="flex sm:hidden items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search student, book, ID..."
+                    className="w-full pl-9 pr-7 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 outline-hidden"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
-          {/* Book Filter */}
-          <div className="text-xs">
-            <SearchableSelect
-              options={bookOptions}
-              value={selectedBook}
-              onChange={setSelectedBook}
-              placeholder="Filter by Book..."
-            />
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                    showMobileFilters || filterCount > 0
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Filters</span>
+                  {filterCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                      {filterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
 
-          {/* Category Filter */}
-          <div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-hidden transition-colors"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              {/* Mobile Filter Panel */}
+              {showMobileFilters && (
+                <div className="sm:hidden p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200 text-xs font-bold text-slate-700">
+                    <span>Filter Feed</span>
+                    {filterCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMember('all');
+                          setSelectedBook('all');
+                          setSelectedCategory('all');
+                        }}
+                        className="text-rose-600 hover:underline text-[11px]"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Student / Borrower
+                    </label>
+                    <SearchableSelect
+                      options={memberOptions}
+                      value={selectedMember}
+                      onChange={setSelectedMember}
+                      placeholder="Filter by Student..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Book Title
+                    </label>
+                    <SearchableSelect
+                      options={bookOptions}
+                      value={selectedBook}
+                      onChange={setSelectedBook}
+                      placeholder="Filter by Book..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-800"
+                    >
+                      <option value="all">All Categories</option>
+                      {categories.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Search & Dropdowns Grid */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search student, book, author, ID..."
+                    className="w-full pl-9 pr-7 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-hidden transition-colors"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-xs">
+                  <SearchableSelect
+                    options={memberOptions}
+                    value={selectedMember}
+                    onChange={setSelectedMember}
+                    placeholder="Filter by Student..."
+                  />
+                </div>
+
+                <div className="text-xs">
+                  <SearchableSelect
+                    options={bookOptions}
+                    value={selectedBook}
+                    onChange={setSelectedBook}
+                    placeholder="Filter by Book..."
+                  />
+                </div>
+
+                <div>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-hidden transition-colors"
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Row 2: Status, Fine Status & Sorting */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
@@ -913,7 +1027,142 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+          <>
+            {/* Mobile Cards View (< md screens) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredAssignments.map((record) => {
+                const isReturned = record.status === 'returned' || !!record.returnedDate;
+                const fineAmount = record.fineAmount || record.currentFine || 0;
+                const catName =
+                  typeof record.book?.category === 'object' ? record.book?.category?.name : 'General';
+                const isTeacher = (record.member as any)?.memberType === 'teacher';
+
+                return (
+                  <div key={record._id} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                    {/* Header: Student Name + Status badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                            isTeacher ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {isTeacher ? <Briefcase className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 text-sm">
+                            {record.member?.name || 'Unknown Student'}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                            <span className="font-mono bg-slate-100 text-slate-700 px-1 py-0.2 rounded text-[10px]">
+                              {record.member?.memberId || 'N/A'}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {formatClassDisplay(record.member?.className, record.member?.section)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div className="shrink-0">
+                        {isReturned ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Returned</span>
+                          </span>
+                        ) : record.isOverdue ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            <span>Overdue</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                            <Clock className="w-3 h-3 text-blue-600" />
+                            <span>Issued</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Book Box */}
+                    <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 text-xs">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
+                          {record.accessionNumber || record.book?.accessionNumber || 'ACC-N/A'}
+                        </span>
+                        <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 font-medium">
+                          {catName}
+                        </span>
+                      </div>
+                      <div className="font-bold text-slate-900 mt-1 text-xs">
+                        {record.book?.title || 'Unknown Title'}
+                      </div>
+                      <div className="text-slate-500 text-[11px]">
+                        By {record.book?.author || 'Unknown'}
+                      </div>
+                    </div>
+
+                    {/* Dates & Fine Strip */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          {isReturned ? 'Issued / Returned' : 'Issued / Due'}
+                        </span>
+                        <div className="font-medium text-slate-800 text-[11px] mt-0.5">
+                          <span>{new Date(record.assignedDate).toLocaleDateString()}</span>
+                          <span className="mx-1 text-slate-300">→</span>
+                          <span className={record.isOverdue && !isReturned ? 'font-bold text-rose-600' : 'font-semibold text-slate-900'}>
+                            {isReturned && record.returnedDate
+                              ? new Date(record.returnedDate).toLocaleDateString()
+                              : new Date(record.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Fine</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="font-bold text-slate-900 text-xs">
+                              {fineAmount > 0 ? formatCurrency(fineAmount) : '₹0'}
+                            </span>
+                            {fineAmount > 0 && (
+                              <span
+                                className={`text-[9px] font-bold px-1 py-0.2 rounded uppercase ${
+                                  record.fineStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {record.fineStatus === 'paid' ? 'PAID' : 'PENDING'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRecord(record);
+                          setIsReceiptModalOpen(true);
+                        }}
+                        className="w-full py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>View Circulation Slip</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
@@ -1117,6 +1366,7 @@ export const ActivityHistoryPage: React.FC<ActivityHistoryPageProps> = ({ initia
                 </tbody>
               </table>
             </div>
+          </>
           )}
         </div>
       )}

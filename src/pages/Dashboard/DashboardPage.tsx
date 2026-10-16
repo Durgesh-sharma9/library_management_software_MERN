@@ -400,21 +400,80 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
 
       {/* Overdue & Due Today Warnings Table */}
       <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden flex flex-col">
-        <div className="p-5 border-b-2 border-slate-50 flex items-center justify-between px-6 bg-white">
+        <div className="p-4 sm:p-5 border-b-2 border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 bg-white">
           <h2 className="font-extrabold text-slate-900 text-base tracking-tight">Overdue & Due Today Warnings</h2>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-rose-100 px-4 py-1.5 rounded-full">
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse"></div>
-              <span className="text-xs text-rose-800 font-black tracking-wider uppercase">Overdue ({summary.overdueBooks})</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 bg-rose-100 px-3 py-1 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></div>
+              <span className="text-[11px] text-rose-800 font-black tracking-wider uppercase">Overdue ({summary.overdueBooks})</span>
             </div>
-            <div className="flex items-center gap-2 bg-amber-100 px-4 py-1.5 rounded-full">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-              <span className="text-xs text-amber-800 font-black tracking-wider uppercase">Due Today ({summary.dueToday})</span>
+            <div className="flex items-center gap-2 bg-amber-100 px-3 py-1 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+              <span className="text-[11px] text-amber-800 font-black tracking-wider uppercase">Due Today ({summary.dueToday})</span>
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Cards (< md) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {warningAssignments.length > 0 ? (
+            warningAssignments.map((a) => {
+              const isOverdue = a.isOverdue || a.calculatedStatus === 'overdue';
+              const isDueToday = a.isDueToday || a.calculatedStatus === 'due_today';
+              return (
+                <div key={a._id} className="p-4 bg-white space-y-2 hover:bg-slate-50/60 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-extrabold text-slate-900 text-sm">{a.member?.name || 'Student'}</div>
+                      <span className="inline-block text-[11px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded font-bold mt-0.5">
+                        {a.member?.memberId || 'LIB'}
+                      </span>
+                    </div>
+                    <div>
+                      {isOverdue ? (
+                        <span className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                          Overdue ({a.lateDays || 1}d)
+                        </span>
+                      ) : isDueToday ? (
+                        <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                          Due Today
+                        </span>
+                      ) : (
+                        <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                          Due Soon
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-xs font-semibold text-slate-700">
+                    📖 {a.book?.title || 'Book Title'}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <span className="text-slate-500">
+                      Due: <strong className="text-slate-800">{new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+                    </span>
+                    <div>
+                      {isOverdue ? (
+                        <span className="text-rose-600 font-extrabold text-sm">{formatCurrency(a.currentFine || 0)}</span>
+                      ) : (
+                        <span className="text-slate-400 font-medium">₹0.00</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-sm text-slate-400 font-bold bg-white">
+              No overdue or urgent due warnings at present.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm bg-white">
             <thead className="bg-white text-slate-500 uppercase text-xs tracking-wider border-b-2 border-slate-100">
               <tr>

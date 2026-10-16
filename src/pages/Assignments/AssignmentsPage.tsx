@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Archive,
   RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { assignmentService, bookService, memberService, categoryService, lostDamagedService } from '../../services/api';
 import { Assignment, Book, Member, BookCategory } from '../../types';
@@ -58,6 +59,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
   const [selectedMemberId, setSelectedMemberId] = useState<string>(initialFilter?.memberId || 'all');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
 
   // Modals
   const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
@@ -889,88 +891,234 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
         </button>
       </div>
 
-      {/* Detailed Filters Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-          <div className="relative sm:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              id="assignment-search-input"
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search student, book, acc no..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-hidden focus:border-blue-500"
-            />
-          </div>
+      {/* Detailed Filters Section */}
+      {(() => {
+        const activeFiltersCount =
+          (selectedStatus !== 'all' ? 1 : 0) +
+          (selectedCategory !== 'all' ? 1 : 0) +
+          (selectedMemberType !== 'all' ? 1 : 0) +
+          (selectedMemberId !== 'all' ? 1 : 0);
 
-          {/* Specific Student / Borrower Filter */}
-          <div>
-            <select
-              id="assignment-specific-member-filter"
-              value={selectedMemberId}
-              onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">Filter by Student / Teacher...</option>
-              {members.map((m) => {
-                const isTch = m.memberType === 'teacher';
-                const clsStr = m.className ? (m.section ? `${m.className}-${m.section}` : m.className) : (m.department || '');
-                return (
-                  <option key={m._id} value={m._id}>
-                    {isTch ? '👨‍🏫 [Teacher]' : '🎓 [Student]'} {m.name} ({clsStr} • {m.memberId})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+        return (
+          <div className="space-y-2 pt-2">
+            {/* Mobile View: Search + Filter Toggle Button */}
+            <div className="flex sm:hidden items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="assignment-search-input-mobile"
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search student, book, acc no..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
 
-          <div>
-            <select
-              id="assignment-member-type-filter"
-              value={selectedMemberType}
-              onChange={(e) => setSelectedMemberType(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Member Roles</option>
-              <option value="student">Students Only</option>
-              <option value="teacher">Teachers / Faculty Only</option>
-            </select>
-          </div>
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                  showMobileFilters || activeFiltersCount > 0
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Filter className="w-3.5 h-3.5 text-blue-600" />
+                <span>Filters</span>
+                {activeFiltersCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+            </div>
 
-          <div>
-            <select
-              id="assignment-status-filter"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Circulation Statuses</option>
-              <option value="active">Issued</option>
-              <option value="overdue">Overdue Books</option>
-              <option value="due_today">Due Today</option>
-              <option value="due_soon">Due Soon (Next 3 Days)</option>
-              <option value="lost">Lost Books</option>
-              <option value="damaged">Damaged Books</option>
-              <option value="returned">Returned / Historical</option>
-            </select>
-          </div>
+            {/* Mobile Expandable Filter Panel */}
+            {showMobileFilters && (
+              <div className="sm:hidden p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 animate-fadeIn">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200 text-xs font-bold text-slate-700">
+                  <span>Filter Records</span>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStatus('all');
+                        setSelectedCategory('all');
+                        setSelectedMemberType('all');
+                        setSelectedMemberId('all');
+                      }}
+                      className="text-rose-600 hover:underline text-[11px]"
+                    >
+                      Reset All
+                    </button>
+                  )}
+                </div>
 
-          <div>
-            <select
-              id="assignment-category-filter"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                    Student / Teacher
+                  </label>
+                  <select
+                    value={selectedMemberId}
+                    onChange={(e) => setSelectedMemberId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                  >
+                    <option value="all">All Borrowers</option>
+                    {members.map((m) => {
+                      const isTch = m.memberType === 'teacher';
+                      const clsStr = m.className ? (m.section ? `${m.className}-${m.section}` : m.className) : (m.department || '');
+                      return (
+                        <option key={m._id} value={m._id}>
+                          {isTch ? '👨‍🏫 [Teacher]' : '🎓 [Student]'} {m.name} ({clsStr} • {m.memberId})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Role
+                    </label>
+                    <select
+                      value={selectedMemberType}
+                      onChange={(e) => setSelectedMemberType(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="student">Students</option>
+                      <option value="teacher">Teachers</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Issued</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="due_today">Due Today</option>
+                      <option value="due_soon">Due Soon</option>
+                      <option value="lost">Lost</option>
+                      <option value="damaged">Damaged</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                    Book Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Desktop Filters Row */}
+            <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="relative sm:col-span-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="assignment-search-input"
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search student, book, acc no..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+
+              {/* Specific Student / Borrower Filter */}
+              <div>
+                <select
+                  id="assignment-specific-member-filter"
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">Filter by Student / Teacher...</option>
+                  {members.map((m) => {
+                    const isTch = m.memberType === 'teacher';
+                    const clsStr = m.className ? (m.section ? `${m.className}-${m.section}` : m.className) : (m.department || '');
+                    return (
+                      <option key={m._id} value={m._id}>
+                        {isTch ? '👨‍🏫 [Teacher]' : '🎓 [Student]'} {m.name} ({clsStr} • {m.memberId})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <select
+                  id="assignment-member-type-filter"
+                  value={selectedMemberType}
+                  onChange={(e) => setSelectedMemberType(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Member Roles</option>
+                  <option value="student">Students Only</option>
+                  <option value="teacher">Teachers / Faculty Only</option>
+                </select>
+              </div>
+
+              <div>
+                <select
+                  id="assignment-status-filter"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Circulation Statuses</option>
+                  <option value="active">Issued</option>
+                  <option value="overdue">Overdue Books</option>
+                  <option value="due_today">Due Today</option>
+                  <option value="due_soon">Due Soon (Next 3 Days)</option>
+                  <option value="lost">Lost Books</option>
+                  <option value="damaged">Damaged Books</option>
+                  <option value="returned">Returned / Historical</option>
+                </select>
+              </div>
+
+              <div>
+                <select
+                  id="assignment-category-filter"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
+        );
+      })()}
 
         {/* Selected Member Filter Chip Banner */}
         {selectedMemberId !== 'all' && (() => {
@@ -1024,7 +1172,191 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Mobile Cards View (Shown on < md screens) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {assignments.map((item) => {
+                const isLost = item.status === 'lost';
+                const isDamaged = item.status === 'damaged';
+                const isLostOrDamaged = isLost || isDamaged || !!item.lostOrDamaged;
+                const isReturned = item.status === 'returned' || !!item.returnedDate;
+                const isOverdue = item.isOverdue && !isLostOrDamaged && !isReturned;
+                const isTeacher = (item.member as any)?.memberType === 'teacher';
+                const fineVal = item.fineAmount || item.currentFine || 0;
+
+                return (
+                  <div key={item._id} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                    {/* Borrower Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                            isTeacher ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {isTeacher ? <Briefcase className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {item.member?.name || 'Unknown Member'}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                                isTeacher ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {isTeacher ? 'Teacher' : 'Student'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                            <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded text-[10px]">
+                              {item.member?.memberId}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {isTeacher
+                                ? `${(item.member as any)?.designation || 'Faculty'} (${(item.member as any)?.department || 'Staff'})`
+                                : `${item.member?.className || 'Class N/A'} (${item.member?.section || 'A'})`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="shrink-0">
+                        {isLost ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            <span>Lost</span>
+                          </span>
+                        ) : isDamaged ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200">
+                            <ShieldAlert className="w-3 h-3 text-amber-600" />
+                            <span>Damaged</span>
+                          </span>
+                        ) : isReturned ? (
+                          <Badge variant="success" size="sm">Returned</Badge>
+                        ) : isOverdue ? (
+                          <Badge variant="danger" size="sm">Overdue</Badge>
+                        ) : item.isDueToday ? (
+                          <Badge variant="warning" size="sm">Due Today</Badge>
+                        ) : (
+                          <Badge variant="primary" size="sm">Issued</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Book Details Box */}
+                    <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 text-xs">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-blue-700 bg-blue-100/60 px-1.5 py-0.5 rounded text-[11px]">
+                          {item.accessionNumber || (item.book as any)?.accessionNumber || 'ACC-N/A'}
+                        </span>
+                        {item.copyNumber && (
+                          <span className="font-semibold text-slate-600 bg-white border border-slate-200 px-1.5 py-0.2 rounded text-[10px]">
+                            Copy #{item.copyNumber}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-bold text-slate-900 mt-1 text-xs">
+                        {item.book?.title || 'Unknown Title'}
+                      </p>
+                      <p className="text-slate-500 text-[11px]">
+                        By {item.book?.author || 'Unknown Author'}
+                      </p>
+                      {(item.reissueCount || 0) > 0 && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                            <RefreshCw className="w-2.5 h-2.5" />
+                            <span>Reissued {item.reissueCount}x</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dates and Fine 2-column info */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Issued / Due</span>
+                        <div className="font-medium text-slate-800 text-[11px] mt-0.5">
+                          <span>{new Date(item.assignedDate).toLocaleDateString()}</span>
+                          <span className="mx-1 text-slate-300">→</span>
+                          <span className={isOverdue ? 'font-bold text-rose-600' : 'font-semibold text-slate-900'}>
+                            {new Date(item.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {isOverdue && (
+                          <span className="text-[10px] font-bold text-rose-600 block mt-0.5">
+                            {item.lateDays} day(s) late
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Fee / Fine</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="font-bold text-slate-900 text-xs">
+                              {formatCurrency(fineVal)}
+                            </span>
+                            {fineVal > 0 && (
+                              <span
+                                className={`text-[9px] font-bold px-1 py-0.2 rounded uppercase ${
+                                  item.fineStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {item.fineStatus === 'paid' ? 'PAID' : 'PENDING'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {item.fineStatus !== 'paid' && fineVal > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCollectFineModal(item)}
+                            className="mt-1 text-[10px] text-amber-700 hover:text-amber-800 font-bold underline text-left cursor-pointer"
+                          >
+                            Collect Fine
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                      {!isLostOrDamaged && !isReturned ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReturnModal(item)}
+                            className="flex-1 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Return</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReissueModal(item)}
+                            className="flex-1 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Re-Issue</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="w-full text-center py-1 text-xs text-slate-500 font-medium">
+                          {isLost ? 'Reported Lost Book' : isDamaged ? 'Reported Damaged Book' : 'Book Returned'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
@@ -1290,6 +1622,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ initialFilter 
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

@@ -573,7 +573,147 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ onNavigateTab }) =
             <p className="text-xs text-slate-400">Try clearing your search term or switching condition filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Mobile Cards View (< md screens) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredItems.map((item, idx) => (
+                <div key={`${item.bookId}-${item.accessionNumber}-${idx}`} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                  {/* Top Bar: Accession Badge + Copy # + Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 text-xs">
+                        {item.accessionNumber}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                        Copy #{item.copyNumber}
+                      </span>
+                    </div>
+
+                    <div className="shrink-0">
+                      {item.status === 'available' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Available</span>
+                        </span>
+                      )}
+                      {item.status === 'assigned' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          <Users className="w-3 h-3 text-blue-600" />
+                          <span>Issued</span>
+                        </span>
+                      )}
+                      {item.status === 'damaged' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          <ShieldAlert className="w-3 h-3 text-amber-600" />
+                          <span>Damaged</span>
+                        </span>
+                      )}
+                      {item.status === 'lost' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                          <AlertTriangle className="w-3 h-3 text-rose-600" />
+                          <span>Lost</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Book Info */}
+                  <div className="flex items-start gap-2.5">
+                    {item.coverImage ? (
+                      <img
+                        src={item.coverImage}
+                        alt={item.bookTitle}
+                        className="w-10 h-14 object-cover rounded border border-slate-200 shrink-0 bg-slate-100 mt-0.5"
+                      />
+                    ) : (
+                      <div className="w-10 h-14 bg-slate-100 rounded border border-slate-200 flex items-center justify-center shrink-0">
+                        <BookOpen className="w-5 h-5 text-slate-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-slate-900 text-xs leading-snug">
+                        {item.bookTitle}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                        By {item.bookAuthor}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1 text-[10px]">
+                        <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
+                          {item.categoryName}
+                        </span>
+                        <span className="font-mono text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                          📍 {item.shelfLocation}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Borrower or Location Box */}
+                  {item.status === 'assigned' && (
+                    <div className="bg-blue-50/60 rounded-xl p-2.5 border border-blue-100 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {item.assignedToType === 'teacher' ? (
+                            <Briefcase className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          ) : (
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          )}
+                          <span className="font-bold text-slate-900">{item.assignedToName || 'Borrower'}</span>
+                        </div>
+                        {item.assignedToId && (
+                          <span className="text-[10px] font-mono text-slate-600 bg-white px-1.5 py-0.2 rounded border border-slate-200">
+                            {item.assignedToId}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center justify-between pt-0.5">
+                        <span>Issued: {item.assignedDate || '—'}</span>
+                        <span className="text-rose-600 font-bold">Due: {item.dueDate || '—'}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(item.status === 'damaged' || item.status === 'lost') && (
+                    <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-200 text-xs space-y-1">
+                      <p className="font-medium text-slate-800 text-[11px]">
+                        {item.incidentReason || `${item.status.toUpperCase()} copy recorded`}
+                      </p>
+                      <div className="text-[10px] text-slate-500 flex items-center justify-between">
+                        <span>Date: {item.incidentDate || '—'}</span>
+                        {item.fineAmount !== undefined && item.fineAmount > 0 && (
+                          <span className="text-rose-600 font-bold">Fine: ₹{item.fineAmount}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions & Price Strip */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Asset Price</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs">
+                        ₹{item.price ? Number(item.price).toLocaleString('en-IN') : '0'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedItemForAudit(item);
+                        setIsAuditModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-bold text-xs transition-colors cursor-pointer border border-slate-200"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Audit Log</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
@@ -728,8 +868,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ onNavigateTab }) =
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </>
+      )}
+    </div>
 
       {/* PHYSICAL COPY AUDIT MODAL */}
       {selectedItemForAudit && (

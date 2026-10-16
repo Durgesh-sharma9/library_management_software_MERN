@@ -720,7 +720,7 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => fetchData(true)}
@@ -961,7 +961,173 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Mobile Cards View (< md screens) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredLogs.map((log) => {
+                const isLost = log.type === 'lost';
+                const isTeacher = (log.member as any)?.memberType === 'teacher';
+                const hasMember = Boolean(log.member);
+
+                return (
+                  <div key={log._id} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                    {/* Top Row: Date & Condition Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900">
+                          {new Date(log.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="text-[10px] text-slate-400 ml-1.5 font-mono">
+                          {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      <div>
+                        {log.resolutionType === 'book_replaced' || log.type === 'replaced' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-200">
+                            <RefreshCw className="w-3 h-3 text-emerald-600" />
+                            <span>Replaced</span>
+                          </span>
+                        ) : isLost ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            <span>Lost</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200">
+                            <ShieldAlert className="w-3 h-3 text-amber-600" />
+                            <span>Damaged</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Book Details Box */}
+                    <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 text-xs">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 text-[10px]">
+                          {log.book?.accessionNumber || 'ACC-N/A'}
+                        </span>
+                        <span className="font-bold text-slate-900 text-xs">
+                          {log.book?.title}
+                        </span>
+                      </div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">
+                        By {log.book?.author}
+                      </div>
+                    </div>
+
+                    {/* Borrower / Origin Box */}
+                    <div className="text-xs">
+                      {hasMember && log.member ? (
+                        <div className="p-2.5 bg-blue-50/40 rounded-xl border border-blue-100/80 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isTeacher ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {isTeacher ? <Briefcase className="w-3 h-3" /> : <GraduationCap className="w-3 h-3" />}
+                              </div>
+                              <span className="font-bold text-slate-900 text-xs">{log.member.name}</span>
+                              <span className={`text-[9px] font-bold px-1 py-0.2 rounded uppercase ${isTeacher ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {isTeacher ? 'Teacher' : 'Student'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500">{log.member.memberId}</span>
+                          </div>
+
+                          <div className="text-[11px] text-slate-600 pl-6.5">
+                            {!isTeacher ? (
+                              <span>
+                                {log.member.className ? `Class: ${log.member.className}${log.member.section ? ` - ${log.member.section}` : ''}` : 'Class N/A'}
+                                {log.member.admissionNo && ` • Adm: ${log.member.admissionNo}`}
+                              </span>
+                            ) : (
+                              <span>Dept: {log.member.department || log.member.designation || 'Staff'}</span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center justify-between">
+                          <span className="text-slate-600 text-[11px] font-medium flex items-center gap-1">
+                            <Archive className="w-3 h-3 text-slate-400" />
+                            <span>Shelf / Catalog Audit</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(log)}
+                            className="text-[10px] font-bold text-blue-600 hover:underline"
+                          >
+                            Link Student
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock & Fine Info Strip */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Stock Impact</span>
+                        {log.resolutionType === 'book_replaced' || log.type === 'replaced' || log.stockDeducted === false ? (
+                          <span className="font-bold text-emerald-800 text-[11px]">Replaced (0 Deducted)</span>
+                        ) : (
+                          <span className="font-bold text-rose-700 text-[11px]">-{log.copiesCount || 1} copy Deducted</span>
+                        )}
+                      </div>
+
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block">Fine Assessment</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="font-bold text-slate-900 text-xs">₹{log.fineAmount || 0}</span>
+                            {log.fineAmount > 0 && (
+                              <span
+                                className={`text-[9px] font-bold px-1 py-0.2 rounded uppercase ${
+                                  log.fineStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {log.fineStatus === 'paid' ? 'PAID' : 'PENDING'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Remarks if any */}
+                    {log.reason && (
+                      <p className="text-[11px] text-slate-500 italic bg-slate-50/50 p-2 rounded-lg border border-slate-100">
+                        "{log.reason}"
+                      </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                      {log.fineAmount > 0 && log.fineStatus === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFineModal(log)}
+                          className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <span>Collect Fine</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(log)}
+                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit Details</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px] tracking-wider">
@@ -1180,6 +1346,7 @@ export const LostDamagedPage: React.FC<LostDamagedPageProps> = ({ onNavigateTab 
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

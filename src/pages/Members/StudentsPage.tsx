@@ -52,6 +52,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({ initialFilter }) => 
   const [selectedClass, setSelectedClass] = useState<string>(initialFilter?.className || 'all');
   const [selectedSection, setSelectedSection] = useState<string>(initialFilter?.section || 'all');
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilter?.status || 'all');
+  const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -464,70 +465,196 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({ initialFilter }) => 
         </div>
 
         {/* Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-            <input
-              id="search-students-input"
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by Name, Member ID, Admission No..."
-              className="w-full pl-8.5 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+        {(() => {
+          const activeFiltersCount =
+            (selectedClass !== 'all' ? 1 : 0) +
+            (selectedSection !== 'all' ? 1 : 0) +
+            (selectedStatus !== 'all' ? 1 : 0);
 
-          <div>
-            <select
-              id="filter-student-class"
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Classes</option>
-              {classes.map((cls) => (
-                <option key={cls._id} value={cls.name}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          return (
+            <div className="space-y-2.5 pt-2 border-t border-slate-100">
+              {/* Mobile Search & Filter Toggle */}
+              <div className="flex sm:hidden items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    id="search-students-input-mobile"
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search name, ID, adm no..."
+                    className="w-full pl-8.5 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-hidden focus:border-indigo-500"
+                  />
+                </div>
 
-          <div>
-            <select
-              id="filter-student-section"
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Sections</option>
-              {selectedClass !== 'all'
-                ? getSectionsForClass(selectedClass).map((secName) => (
-                    <option key={secName} value={secName}>
-                      Section {secName}
-                    </option>
-                  ))
-                : ['A', 'B', 'C', 'D', 'E', 'F'].map((secName) => (
-                    <option key={secName} value={secName}>
-                      Section {secName}
-                    </option>
-                  ))}
-            </select>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                    showMobileFilters || activeFiltersCount > 0
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Filters</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+              </div>
 
-          <div>
-            <select
-              id="filter-student-status"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active Members</option>
-              <option value="inactive">Inactive / Suspended</option>
-            </select>
-          </div>
-        </div>
+              {/* Mobile Filter Panel */}
+              {showMobileFilters && (
+                <div className="sm:hidden p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200 text-xs font-bold text-slate-700">
+                    <span>Filter Students</span>
+                    {activeFiltersCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedClass('all');
+                          setSelectedSection('all');
+                          setSelectedStatus('all');
+                        }}
+                        className="text-rose-600 hover:underline text-[11px]"
+                      >
+                        Reset All
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                      Class
+                    </label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                    >
+                      <option value="all">All Classes</option>
+                      {classes.map((cls) => (
+                        <option key={cls._id} value={cls.name}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        Section
+                      </label>
+                      <select
+                        value={selectedSection}
+                        onChange={(e) => setSelectedSection(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                      >
+                        <option value="all">All Sections</option>
+                        {selectedClass !== 'all'
+                          ? getSectionsForClass(selectedClass).map((secName) => (
+                              <option key={secName} value={secName}>
+                                Section {secName}
+                              </option>
+                            ))
+                          : ['A', 'B', 'C', 'D', 'E', 'F'].map((secName) => (
+                              <option key={secName} value={secName}>
+                                Section {secName}
+                              </option>
+                            ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active Members</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Filter Row */}
+              <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    id="search-students-input"
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by Name, Member ID, Admission No..."
+                    className="w-full pl-8.5 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <select
+                    id="filter-student-class"
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="all">All Classes</option>
+                    {classes.map((cls) => (
+                      <option key={cls._id} value={cls.name}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    id="filter-student-section"
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="all">All Sections</option>
+                    {selectedClass !== 'all'
+                      ? getSectionsForClass(selectedClass).map((secName) => (
+                          <option key={secName} value={secName}>
+                            Section {secName}
+                          </option>
+                        ))
+                      : ['A', 'B', 'C', 'D', 'E', 'F'].map((secName) => (
+                          <option key={secName} value={secName}>
+                            Section {secName}
+                          </option>
+                        ))}
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    id="filter-student-status"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-hidden focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Members</option>
+                    <option value="inactive">Inactive / Suspended</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Students Table */}
@@ -545,7 +672,116 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({ initialFilter }) => 
         />
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Cards View (< md screens) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {students.map((student) => (
+              <div key={student._id} className="p-4 bg-white hover:bg-slate-50/70 transition-colors space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
+                      {student.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{student.name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
+                          ID: {student.memberId}
+                        </span>
+                        {student.admissionNo && (
+                          <span className="font-mono font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 text-[10px]">
+                            Adm: {student.admissionNo}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Badge variant={student.status === 'active' ? 'success' : 'neutral'} size="sm">
+                    {student.status.toUpperCase()}
+                  </Badge>
+                </div>
+
+                {/* Class, Section & Contact Info */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/80 rounded-xl p-2.5 border border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Class & Section</span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {student.className || 'General'} • Sec {student.section || 'A'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Contact WhatsApp</span>
+                    <a
+                      href={`https://wa.me/${(student.whatsapp || '').replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-indigo-700 hover:underline flex items-center gap-1 text-xs"
+                    >
+                      <Phone className="w-3 h-3 text-indigo-500" />
+                      <span>{student.whatsapp}</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Loans & Fine Badges */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">Active Issues:</span>
+                    <span className="font-black text-slate-900">{student.assignedBooksCount || 0}</span>
+                    {student.overdueBooksCount ? (
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded-full border border-rose-200">
+                        {student.overdueBooksCount} Overdue
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-slate-500 font-semibold">Fine:</span>
+                    {(student.pendingFine || 0) > 0 ? (
+                      <span className="font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 text-[11px]">
+                        {formatCurrency(student.pendingFine || 0)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-medium text-[11px]">₹0</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenProfileModal(student)}
+                    className="flex-1 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1"
+                  >
+                    <span>Profile & History</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditModal(student)}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 rounded-xl"
+                    title="Edit Student"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStudent(student)}
+                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-xl"
+                    title="Delete Student"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200/80 text-slate-500 uppercase tracking-wider font-bold text-[10px]">
