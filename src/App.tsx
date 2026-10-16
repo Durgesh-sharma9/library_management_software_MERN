@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { PWAProvider } from './context/PWAContext';
+import { PWAInstallModal } from './components/PWAInstallModal';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginPage } from './pages/Login/LoginPage';
@@ -286,10 +288,13 @@ const MainApp: React.FC = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <MainApp />
-      </SettingsProvider>
-    </AuthProvider>
+    <PWAProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <MainApp />
+          <PWAInstallModal />
+        </SettingsProvider>
+      </AuthProvider>
+    </PWAProvider>
   );
 }

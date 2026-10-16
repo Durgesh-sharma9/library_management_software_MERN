@@ -18,8 +18,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Boxes,
+  Download,
+  Laptop,
 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { usePWA } from '../context/PWAContext';
 
 export type NavTab =
   | 'dashboard'
@@ -56,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   const { settings } = useSettings();
+  const { promptInstall, openInstallModal, isInstalled } = usePWA();
   const mobileVisible = isMobileOpen ?? isOpen ?? false;
 
   // Auto-expand Members submenu if activeTab is students or teachers
@@ -481,6 +485,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && activeTab === 'settings' && <div className="w-1.5 h-1.5 rounded-full bg-slate-800 shrink-0"></div>}
           </button>
         </nav>
+
+        {/* PWA Download / Install App Button */}
+        <div className={`px-2 pt-1 border-t border-slate-100 ${isCollapsed ? 'flex justify-center' : ''}`}>
+          <button
+            id="sidebar-pwa-btn"
+            type="button"
+            onClick={async () => {
+              const installed = await promptInstall();
+              if (!installed) openInstallModal();
+            }}
+            title={isInstalled ? 'LibraFlow is Installed' : 'Download & Install LibraFlow PWA'}
+            className={`w-full group rounded-xl transition-all cursor-pointer flex items-center ${
+              isCollapsed
+                ? 'p-2 justify-center text-indigo-600 hover:bg-indigo-50'
+                : 'p-2.5 justify-between bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-indigo-50/80 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200/70 text-indigo-950 shadow-2xs'
+            }`}
+          >
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} min-w-0`}>
+              <div
+                className={`p-1.5 rounded-lg shrink-0 transition-transform ${
+                  isInstalled
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-indigo-600 text-white group-hover:scale-105 shadow-xs'
+                }`}
+              >
+                {isInstalled ? <Laptop className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+              </div>
+              {!isCollapsed && (
+                <div className="text-left min-w-0">
+                  <span className="font-extrabold text-[11px] block leading-tight truncate text-slate-900">
+                    {isInstalled ? 'App Installed' : 'Download App'}
+                  </span>
+                  <span className="text-[9px] text-indigo-600 font-semibold block truncate">
+                    {isInstalled ? 'Running Standalone' : 'Fast Offline Access'}
+                  </span>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && (
+              <span
+                className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                  isInstalled ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-600 text-white'
+                }`}
+              >
+                {isInstalled ? 'Ready' : 'PWA'}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* School Info Box (Active Campus) */}
         <div className={`p-2 m-2 rounded-xl bg-gradient-to-r from-slate-50 via-indigo-50/30 to-blue-50/30 border border-slate-200/80 shadow-2xs text-xs mt-auto ${isCollapsed ? 'flex justify-center' : ''}`}>

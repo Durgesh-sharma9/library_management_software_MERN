@@ -1,7 +1,8 @@
 import React from 'react';
-import { Menu, LogOut, School, Sparkles, Bell, Calendar, UserCheck, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Menu, LogOut, School, Sparkles, Bell, Calendar, UserCheck, PanelLeftClose, PanelLeftOpen, Download, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { usePWA } from '../context/PWAContext';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { settings } = useSettings();
+  const { promptInstall, openInstallModal, isInstalled } = usePWA();
 
   const handleMenuClick = () => {
     if (onOpenMobileMenu) onOpenMobileMenu();
@@ -66,13 +68,44 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right side: Today Date + User Profile + Logout */}
+      {/* Right side: Today Date + PWA Download + User Profile + Logout */}
       <div className="flex items-center gap-2.5 sm:gap-3">
         {/* Today's Date Widget */}
         <div className="hidden xl:flex items-center gap-1.5 text-slate-500 bg-slate-50 border border-slate-200/80 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
           <Calendar className="w-3.5 h-3.5 text-indigo-500" />
           <span>{currentDateStr}</span>
         </div>
+
+        {/* PWA Download / Install App Button */}
+        {isInstalled ? (
+          <button
+            type="button"
+            onClick={openInstallModal}
+            title="LibraFlow is installed as PWA"
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-xl hover:bg-emerald-100 transition-all cursor-pointer shadow-2xs"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[11px]">App Installed</span>
+          </button>
+        ) : (
+          <button
+            id="header-install-pwa-btn"
+            type="button"
+            onClick={async () => {
+              const installed = await promptInstall();
+              if (!installed) openInstallModal();
+            }}
+            title="Download & Install LibraFlow PWA"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl transition-all duration-200 shadow-xs hover:shadow-indigo-500/20 cursor-pointer group active:scale-95"
+          >
+            <Download className="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" />
+            <span className="hidden sm:inline">Download App</span>
+            <span className="sm:hidden text-[10px]">App</span>
+            <span className="hidden md:inline-block bg-white/20 text-[9px] px-1 rounded-sm uppercase tracking-wider font-extrabold">
+              PWA
+            </span>
+          </button>
+        )}
 
         {/* User profile Chip */}
         <div className="flex items-center gap-2 bg-gradient-to-r from-slate-50 to-indigo-50/30 pl-1 pr-3 py-1 rounded-full border border-slate-200/90 shadow-2xs">

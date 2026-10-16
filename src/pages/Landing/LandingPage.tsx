@@ -27,8 +27,11 @@ import {
   Award,
   Lock,
   Compass,
+  Download,
+  Laptop,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePWA } from '../../context/PWAContext';
 import { authService } from '../../services/api';
 import { School } from '../../types';
 
@@ -38,6 +41,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
   const { login } = useAuth();
+  const { promptInstall, openInstallModal, isInstalled } = usePWA();
   const [demoLoading, setDemoLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'circulation' | 'lost' | 'multischool' | 'catalog' | 'members'>('circulation');
 
@@ -208,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
         </p>
 
         {/* CTA Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-md mx-auto">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-2xl mx-auto">
           <button
             id="hero-instant-demo-btn"
             onClick={handleInstantDemoLogin}
@@ -221,12 +225,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
           </button>
 
           <button
+            id="hero-download-pwa-btn"
+            onClick={async () => {
+              const installed = await promptInstall();
+              if (!installed) openInstallModal();
+            }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-bold text-indigo-200 hover:text-white bg-indigo-950/70 hover:bg-indigo-900/90 border border-indigo-500/40 hover:border-indigo-400 transition-all cursor-pointer shadow-lg shadow-indigo-950/50"
+          >
+            <Download className="w-4 h-4 text-indigo-400" />
+            <span>{isInstalled ? 'PWA Installed (Open)' : 'Download PWA App'}</span>
+          </button>
+
+          <button
             id="hero-register-btn"
             onClick={() => onOpenLogin('register')}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 transition-all cursor-pointer"
           >
             <Building2 className="w-4 h-4 text-indigo-400" />
-            <span>Register School Workspace</span>
+            <span>Register School</span>
           </button>
         </div>
 
@@ -986,6 +1002,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
           </div>
         </div>
       </footer>
+
+      {/* Sticky Bottom-Right PWA Download Button */}
+      <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40">
+        <button
+          id="sticky-bottom-pwa-btn"
+          type="button"
+          onClick={async () => {
+            const installed = await promptInstall();
+            if (!installed) openInstallModal();
+          }}
+          title={isInstalled ? 'LibraFlow PWA is Installed' : 'Download & Install LibraFlow PWA'}
+          className="group flex items-center gap-2.5 pl-3 pr-4 py-2 sm:pl-3.5 sm:pr-4 sm:py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white border border-indigo-500/50 hover:border-indigo-400 shadow-2xl shadow-indigo-950/80 backdrop-blur-xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-white/10"
+        >
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/40 group-hover:rotate-12 transition-transform">
+            <Download className="w-4 h-4 text-white" />
+          </div>
+
+          <div className="text-left flex flex-col">
+            <span className="text-xs font-black tracking-tight text-white leading-tight flex items-center gap-1.5">
+              <span>{isInstalled ? 'App Ready' : 'Download App'}</span>
+              <span className="bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[9px] font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                PWA
+              </span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {isInstalled ? 'Running Standalone' : 'Offline & Desktop App'}
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };

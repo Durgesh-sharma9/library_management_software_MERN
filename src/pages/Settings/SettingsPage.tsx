@@ -40,8 +40,15 @@ import {
   BookMarked,
   Hash,
   ChevronRight,
+  Download,
+  Laptop,
+  Smartphone,
+  Wifi,
+  WifiOff,
+  Zap,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
+import { usePWA } from '../../context/PWAContext';
 import { categoryService, settingService } from '../../services/api';
 import { BookCategory, CheckLimitResult, ViolatingMember, FineRule } from '../../types';
 import { Modal } from '../../components/Modal';
@@ -54,7 +61,8 @@ interface SettingsPageProps {
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => {
   const { settings, updateSettings, refreshSettings } = useSettings();
-  const [activeTab, setActiveTab] = useState<'profile' | 'accession' | 'lending' | 'categories'>('profile');
+  const { promptInstall, openInstallModal, isInstalled, isInstallable, isOnline } = usePWA();
+  const [activeTab, setActiveTab] = useState<'profile' | 'accession' | 'lending' | 'categories' | 'pwa'>('profile');
   const [seedingData, setSeedingData] = useState<boolean>(false);
 
   const getTodayStr = () => {
@@ -770,6 +778,36 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
                 </div>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'categories' ? 'text-amber-600 translate-x-0.5' : 'text-slate-300'}`} />
+            </button>
+
+            {/* 5. Progressive Web App (PWA) Nav Item */}
+            <button
+              id="tab-pwa-settings"
+              type="button"
+              onClick={() => setActiveTab('pwa')}
+              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-200 cursor-pointer ${
+                activeTab === 'pwa'
+                  ? 'bg-gradient-to-r from-indigo-50 to-purple-50/50 text-indigo-950 border border-indigo-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-xl transition-colors ${activeTab === 'pwa' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
+                  <Download className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold block leading-tight text-slate-900">App & Offline PWA</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded font-extrabold uppercase bg-indigo-100 text-indigo-700">
+                      PWA
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block font-semibold truncate mt-0.5">
+                    {isInstalled ? 'Installed as native app' : 'Install on desktop & mobile'}
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${activeTab === 'pwa' ? 'text-indigo-600 translate-x-0.5' : 'text-slate-300'}`} />
             </button>
           </div>
         </div>
@@ -1846,6 +1884,224 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateTab }) => 
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: PROGRESSIVE WEB APP (PWA) & OFFLINE ACCESS */}
+        {activeTab === 'pwa' && (
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Download className="w-4 h-4 text-indigo-600" />
+                  <span>Progressive Web App (PWA) & Offline Mode</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                  Install LibraFlow as a native desktop or mobile application with offline-ready caching
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                    isInstalled
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isInstalled ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-500'
+                    }`}
+                  ></span>
+                  <span>{isInstalled ? 'Installed as App' : 'Browser Mode'}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Status Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Card 1: App Status */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                  Installation Status
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${isInstalled ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                    <Laptop className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">
+                      {isInstalled ? 'Standalone Native App' : 'Browser Tab'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {isInstalled ? 'Runs in dedicated window' : 'Installable on this device'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Network Connectivity */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                  Network Connectivity
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">
+                      {isOnline ? 'Online & Synchronized' : 'Offline Mode Active'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {isOnline ? 'Real-time database sync' : 'Serving cached offline shell'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Service Worker Status */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                  Service Worker Cache
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-purple-100 text-purple-700">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">Active & Registered</span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      v1 Shell Pre-cached
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Action Banner */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 text-white relative overflow-hidden shadow-md">
+              <div className="absolute right-0 top-0 -mt-6 -mr-6 w-36 h-36 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5 max-w-xl">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/30 border border-indigo-300/30 text-[10px] font-bold text-indigo-200 uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-amber-300" />
+                    <span>Next-Gen Web App Experience</span>
+                  </div>
+                  <h4 className="text-base font-extrabold text-white">
+                    {isInstalled ? 'LibraFlow is Configured as a Desktop App' : 'Install LibraFlow on This Device'}
+                  </h4>
+                  <p className="text-xs text-indigo-100/90 leading-relaxed font-normal">
+                    {isInstalled
+                      ? 'You are running the standalone Progressive Web App. You get ultra-fast load times, background cache sync, and distraction-free circulation desks.'
+                      : 'Install LibraFlow to your taskbar, start menu, or mobile home screen. Launches in a dedicated window without browser address bar clutter.'}
+                  </p>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const installed = await promptInstall();
+                      if (!installed) openInstallModal();
+                    }}
+                    className="w-full sm:w-auto px-5 py-3 bg-white hover:bg-slate-50 text-indigo-900 font-extrabold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-black/20 hover:scale-[1.02] active:scale-95"
+                  >
+                    <Download className="w-4 h-4 text-indigo-600" />
+                    <span>{isInstalled ? 'App Details & Guide' : 'Install PWA App'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* PWA Features Grid */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Why use LibraFlow as a PWA?
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100 text-blue-700 shrink-0 mt-0.5">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">Instant Desktop Launch</h5>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      Opens directly from your desktop shortcut or dock without needing to open Chrome or Edge first.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                    <WifiOff className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">Offline Resilience</h5>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      Core application files and UI shell are stored in local browser cache, keeping the app snappy on weak school Wi-Fi.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 text-purple-700 shrink-0 mt-0.5">
+                    <Laptop className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">Dedicated Window</h5>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      No browser tabs, URL bars, or bookmarks cluttering the screen. Perfect for high-volume circulation desks.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">Zero App Store Overhead</h5>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      No installer .exe or app store updates required. When new ERP features are deployed, they sync automatically.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Platform Guides */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Laptop className="w-4 h-4 text-indigo-600" />
+                <span>Device Installation Instructions</span>
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1">
+                  <span className="font-bold text-slate-900 block">Windows & Mac (Chrome / Edge)</span>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Look for the <strong>Install</strong> icon in the address bar, or click browser menu (⋮) → <strong>Install LibraFlow</strong>.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1">
+                  <span className="font-bold text-slate-900 block">Android Tablets & Phones</span>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Tap the <strong>Download App</strong> button above or Chrome menu (⋮) → <strong>Add to Home screen</strong>.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1">
+                  <span className="font-bold text-slate-900 block">iPad & iPhone (Safari)</span>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Tap the <strong>Share</strong> icon (⎋) in Safari, scroll down and tap <strong>Add to Home Screen</strong> (⊞).
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

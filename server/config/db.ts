@@ -17,14 +17,21 @@ export async function connectDB() {
     try {
       console.log('Connecting to provided MongoDB URI...');
       await mongoose.connect(customUri, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 15000,
       });
       isConnected = true;
-      console.log('Connected successfully to MongoDB.');
+      console.log('✅ Connected successfully to MongoDB Atlas.');
       return;
-    } catch (err) {
-      console.warn('Could not connect to provided MONGODB_URI, falling back to in-memory instance:', err);
+    } catch (err: any) {
+      console.error('❌ Could not connect to provided MONGODB_URI:', err.message || err);
+      // If user provided a link, do NOT silently download 760MB in-memory mongo unless explicitly forced
+      if (process.env.FORCE_MEMORY_DB !== 'true') {
+        throw new Error(
+          `MongoDB connection failed (${err.message}). Check your internet connection or MongoDB Atlas IP whitelist. To force in-memory DB, set FORCE_MEMORY_DB=true.`
+        );
+      }
+      console.warn('Falling back to in-memory instance as FORCE_MEMORY_DB=true...');
     }
   }
 
