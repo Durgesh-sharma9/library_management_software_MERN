@@ -23,6 +23,7 @@ import {
   DollarSign,
   Image as ImageIcon,
   Upload,
+  Camera,
   ChevronDown,
   ChevronUp,
   UserCheck,
@@ -37,6 +38,7 @@ import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { BulkImportBooksModal } from '../../components/BulkImportBooksModal';
+import { CameraCaptureModal } from '../../components/CameraCaptureModal';
 import { BookAnalyticsView } from './BookAnalyticsView';
 import { useSettings } from '../../context/SettingsContext';
 import { compressImage, formatBytes } from '../../utils/imageCompressor';
@@ -123,12 +125,10 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [imageCompressionInfo, setImageCompressionInfo] = useState<string>('');
+  const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processAndUploadImage = async (file: File) => {
     if (file.size > 25 * 1024 * 1024) {
       setFormError('Image file size exceeds 25MB limit.');
       return;
@@ -151,7 +151,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
       const compSize = formatBytes(compressed.compressedSizeBytes);
       setImageCompressionInfo(`Auto-Compressed: ${origSize} ➔ ${compSize} (${compressed.reductionPercentage}% saved)`);
 
-      const cleanFileName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+      const cleanFileName = (file.name || 'book-cover.jpg').replace(/\.[^/.]+$/, '') + '.jpg';
       const res = await uploadService.uploadImage(compressed.base64, cleanFileName);
       if (res && res.url) {
         setFormData((prev) => ({ ...prev, coverImage: res.url }));
@@ -163,6 +163,17 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processAndUploadImage(file);
+    e.target.value = '';
+  };
+
+  const handleCameraCapture = async (file: File) => {
+    await processAndUploadImage(file);
   };
 
   // Live sequential serial generator preview for Add Book modal
@@ -1379,10 +1390,10 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
               )}
 
               <div className="flex-1 flex flex-col justify-center gap-1.5">
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
                     <Upload className="w-4 h-4 text-indigo-200" />
-                    <span>{uploadingImage ? 'Compressing & Uploading...' : 'Upload Book Cover Image'}</span>
+                    <span>Upload Image</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1391,7 +1402,23 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                       disabled={uploadingImage}
                     />
                   </label>
-                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    disabled={uploadingImage}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-purple-500/20 active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4 text-purple-200" />
+                    <span>Camera / Take Photo</span>
+                  </button>
+
+                  {uploadingImage && (
+                    <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold animate-pulse">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Processing...</span>
+                    </span>
+                  )}
                 </div>
                 {imageCompressionInfo && (
                   <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
@@ -1813,10 +1840,10 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
               )}
 
               <div className="flex-1 flex flex-col justify-center gap-1.5">
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 active:scale-95">
                     <Upload className="w-4 h-4 text-indigo-200" />
-                    <span>{uploadingImage ? 'Compressing & Uploading...' : 'Upload Book Cover Image'}</span>
+                    <span>Upload Image</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1825,7 +1852,23 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
                       disabled={uploadingImage}
                     />
                   </label>
-                  {uploadingImage && <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin" />}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    disabled={uploadingImage}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-purple-500/20 active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4 text-purple-200" />
+                    <span>Camera / Take Photo</span>
+                  </button>
+
+                  {uploadingImage && (
+                    <span className="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold animate-pulse">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Processing...</span>
+                    </span>
+                  )}
                 </div>
                 {imageCompressionInfo && (
                   <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
@@ -2425,6 +2468,14 @@ export const BooksPage: React.FC<BooksPageProps> = ({ initialFilter }) => {
           </div>
         </form>
       </Modal>
+
+      {/* CAMERA CAPTURE MODAL */}
+      <CameraCaptureModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={handleCameraCapture}
+        title="Take Book Cover Photo"
+      />
     </div>
   );
 };
