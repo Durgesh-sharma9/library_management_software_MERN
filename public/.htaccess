@@ -1,0 +1,19 @@
+# Apache configuration for LibraFlow MERN ERP on Webuzo / cPanel
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Proxy all API requests to Node.js Express backend (Port 3000)
+  RewriteRule ^api/(.*)$ http://127.0.0.1:3000/api/$1 [P,L]
+  RewriteRule ^api$ http://127.0.0.1:3000/api [P,L]
+
+  # 2. If the requested file or directory exists physically, serve it directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 3. Rewrite all other SPA navigation requests to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>

@@ -19,6 +19,7 @@ import { ActivityHistoryPage } from './pages/Activity/ActivityHistoryPage';
 import { SubscriptionPage } from './pages/Subscription/SubscriptionPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { InventoryPage } from './pages/Inventory/InventoryPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Shield, ArrowLeft, Building2 } from 'lucide-react';
 
 interface FilterNavigation {
@@ -236,49 +237,51 @@ const MainApp: React.FC = () => {
           />
 
           <main className="flex-1 p-3 sm:p-4 lg:p-5 max-w-7xl w-full mx-auto">
-            {activeTab === 'dashboard' && (
-              <DashboardPage onNavigateTab={handleNavigateTab as any} />
-            )}
+            <ErrorBoundary>
+              {activeTab === 'dashboard' && (
+                <DashboardPage onNavigateTab={handleNavigateTab as any} />
+              )}
 
-            {activeTab === 'books' && (
-              <BooksPage initialFilter={navigationFilters} />
-            )}
+              {activeTab === 'books' && (
+                <BooksPage initialFilter={navigationFilters} />
+              )}
 
-            {activeTab === 'inventory' && (
-              <InventoryPage onNavigateTab={handleNavigateTab as any} />
-            )}
+              {activeTab === 'inventory' && (
+                <InventoryPage onNavigateTab={handleNavigateTab as any} />
+              )}
 
-            {activeTab === 'students' && (
-              <StudentsPage initialFilter={navigationFilters} />
-            )}
+              {activeTab === 'students' && (
+                <StudentsPage initialFilter={navigationFilters} />
+              )}
 
-            {activeTab === 'teachers' && (
-              <TeachersPage />
-            )}
+              {activeTab === 'teachers' && (
+                <TeachersPage />
+              )}
 
-            {activeTab === 'masters' && (
-              <MasterManagementPage onNavigateTab={handleNavigateTab as any} />
-            )}
+              {activeTab === 'masters' && (
+                <MasterManagementPage onNavigateTab={handleNavigateTab as any} />
+              )}
 
-            {activeTab === 'assignments' && (
-              <AssignmentsPage initialFilter={navigationFilters} />
-            )}
+              {activeTab === 'assignments' && (
+                <AssignmentsPage initialFilter={navigationFilters} />
+              )}
 
-            {activeTab === 'lost-damaged' && (
-              <LostDamagedPage onNavigateTab={handleNavigateTab as any} />
-            )}
+              {activeTab === 'lost-damaged' && (
+                <LostDamagedPage onNavigateTab={handleNavigateTab as any} />
+              )}
 
-            {activeTab === 'activity' && (
-              <ActivityHistoryPage initialFilter={navigationFilters} />
-            )}
+              {activeTab === 'activity' && (
+                <ActivityHistoryPage initialFilter={navigationFilters} />
+              )}
 
-            {activeTab === 'subscription' && (
-              <SubscriptionPage onNavigateTab={handleNavigateTab as any} />
-            )}
+              {activeTab === 'subscription' && (
+                <SubscriptionPage onNavigateTab={handleNavigateTab as any} />
+              )}
 
-            {activeTab === 'settings' && (
-              <SettingsPage onNavigateTab={handleNavigateTab as any} />
-            )}
+              {activeTab === 'settings' && (
+                <SettingsPage onNavigateTab={handleNavigateTab as any} />
+              )}
+            </ErrorBoundary>
           </main>
         </div>
       </div>

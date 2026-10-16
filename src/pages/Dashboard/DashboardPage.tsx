@@ -54,18 +54,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
     try {
       setLoading(true);
       const [dashData, recentData, cats, allAssignments] = await Promise.all([
-        dashboardService.getAnalytics(catId === 'all' ? undefined : catId),
-        dashboardService.getRecentActivity(),
-        categoryService.getAll(true),
-        assignmentService.getAll({ status: 'assigned' }),
+        dashboardService.getAnalytics(catId === 'all' ? undefined : catId).catch(() => null),
+        dashboardService.getRecentActivity().catch(() => []),
+        categoryService.getAll(true).catch(() => []),
+        assignmentService.getAll({ status: 'assigned' }).catch(() => []),
       ]);
-      setData(dashData);
-      setActivities(recentData);
-      setCategories(cats);
+      if (dashData) setData(dashData);
+      setActivities(Array.isArray(recentData) ? recentData : []);
+      setCategories(Array.isArray(cats) ? cats : []);
 
-      // Filter warning assignments: overdue or due today
-      const warnings = allAssignments
-        .filter((a) => a.isOverdue || a.isDueToday || a.calculatedStatus === 'overdue' || a.calculatedStatus === 'due_today')
+      // Filter warning assignments: overdue or due today safely
+      const assignmentsList = Array.isArray(allAssignments) ? allAssignments : [];
+      const warnings = assignmentsList
+        .filter((a) => a && (a.isOverdue || a.isDueToday || a.calculatedStatus === 'overdue' || a.calculatedStatus === 'due_today'))
         .slice(0, 6);
       setWarningAssignments(warnings);
     } catch (err) {
@@ -160,7 +161,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateTab }) =
             className="bg-white text-slate-800 text-sm font-bold focus:outline-none cursor-pointer"
           >
             <option value="all">All Categories</option>
-            {categories.map((cat) => (
+            {(categories || []).map((cat) => (
               <option key={cat._id} value={cat._id}>
                 {cat.name} {!cat.isActive ? '(Inactive)' : ''}
               </option>
