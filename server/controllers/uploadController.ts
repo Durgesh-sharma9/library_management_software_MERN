@@ -72,3 +72,31 @@ export const uploadImage = async (req: Request, res: Response) => {
     });
   }
 };
+
+// GET /api/upload/proxy?url=... - Streams image with CORS headers for canvas operations
+export const proxyImage = async (req: Request, res: Response) => {
+  try {
+    const imageUrl = req.query.url as string;
+    if (!imageUrl) {
+      return res.status(400).send('URL query parameter is required');
+    }
+
+    const axios = (await import('axios')).default;
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'LibraryPro-ImageProxy',
+      },
+      timeout: 10000,
+    });
+
+    const contentType = (response.headers['content-type'] as string) || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(Buffer.from(response.data));
+  } catch (error: any) {
+    console.error('Proxy image error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

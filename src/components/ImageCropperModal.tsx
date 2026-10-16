@@ -38,19 +38,80 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   const [pinchDist, setPinchDist] = useState<number | null>(null);
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
   const [processing, setProcessing] = useState<boolean>(false);
+  const [safeImageSrc, setSafeImageSrc] = useState<string | null>(null);
+  const [loadingSource, setLoadingSource] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  // Reset state when a new image is loaded
+  // Pre-load and convert remote images to same-origin Blob URLs to prevent canvas tainting
   useEffect(() => {
-    if (isOpen && imageSrc) {
-      setZoom(1);
-      setRotation(0);
-      setPosition({ x: 0, y: 0 });
+    let active = true;
+    let objectUrlToRevoke: string | null = null;
+
+    if (!isOpen || !imageSrc) {
+      setSafeImageSrc(null);
       setImageLoaded(false);
-      setProcessing(false);
+      return;
     }
+
+    setZoom(1);
+    setRotation(0);
+    setPosition({ x: 0, y: 0 });
+    setImageLoaded(false);
+    setProcessing(false);
+
+    // 1. If already data URL or blob URL, it is completely local and taint-free
+    if (imageSrc.startsWith('data:') || imageSrc.startsWith('blob:')) {
+      setSafeImageSrc(imageSrc);
+      return;
+    }
+
+    // 2. If remote HTTP/HTTPS URL (e.g. ImageKit or external CDN)
+    setLoadingSource(true);
+    const prepareRemoteSource = async () => {
+      // First try direct fetch with cache buster to get a fresh response with CORS headers
+      const cacheBustUrl = imageSrc + (imageSrc.includes('?') ? '&' : '?') + 'cors=' + Date.now();
+      try {
+        const res = await fetch(cacheBustUrl, { mode: 'cors' });
+        if (!res.ok) throw new Error('Direct CORS fetch returned status ' + res.status);
+        const blob = await res.blob();
+        if (!active) return;
+        const blobUrl = URL.createObjectURL(blob);
+        objectUrlToRevoke = blobUrl;
+        setSafeImageSrc(blobUrl);
+        setLoadingSource(false);
+        return;
+      } catch (corsErr) {
+        console.warn('Direct CORS fetch failed, trying backend proxy...', corsErr);
+      }
+
+      // Fallback: Fetch via backend proxy which guarantees Access-Control-Allow-Origin: *
+      try {
+        const proxyUrl = `/api/upload/proxy?url=${encodeURIComponent(imageSrc)}`;
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error('Proxy returned status ' + res.status);
+        const blob = await res.blob();
+        if (!active) return;
+        const blobUrl = URL.createObjectURL(blob);
+        objectUrlToRevoke = blobUrl;
+        setSafeImageSrc(blobUrl);
+      } catch (proxyErr) {
+        console.warn('Backend proxy fetch failed, falling back to direct url with crossOrigin', proxyErr);
+        if (active) setSafeImageSrc(imageSrc);
+      } finally {
+        if (active) setLoadingSource(false);
+      }
+    };
+
+    prepareRemoteSource();
+
+    return () => {
+      active = false;
+      if (objectUrlToRevoke) {
+        URL.revokeObjectURL(objectUrlToRevoke);
+      }
+    };
   }, [isOpen, imageSrc]);
 
   // Compute crop box dimensions based on container and aspect ratio
@@ -211,14 +272,41 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             onCropComplete(croppedFile);
             onClose();
           } else {
-            throw new Error('Failed to create cropped image blob.');
+            // Fallback to dataURL if toBlob returned null
+            try {
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+              const arr = dataUrl.split(',');
+              const bstr = atob(arr[1]);
+              let n = bstr.length;
+              const u8arr = new Uint8Array(n);
+              while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+              }
+              const fallbackFile = new File([u8arr], `cropped-cover-${Date.now()}.jpg`, {
+                type: 'image/jpeg',
+              });
+              onCropComplete(fallbackFile);
+              onClose();
+            } catch (fallbackErr: any) {
+              throw new Error('Failed to create cropped image blob: ' + fallbackErr.message);
+            }
           }
         },
         'image/jpeg',
         0.92
       );
     } catch (err: any) {
-      alert('Error cropping image: ' + (err.message || 'Unknown error'));
+      console.warn('Canvas export error:', err);
+      // Fallback: If canvas ever fails, offer to use original image directly
+      const useOriginal = window.confirm(
+        'Notice: Image security restriction prevented client cropping. Would you like to use the original photo directly without cropping?'
+      );
+      if (useOriginal && onSkipCrop) {
+        onSkipCrop();
+        onClose();
+      } else {
+        alert('Error cropping image: ' + (err.message || 'Unknown error'));
+      }
       setProcessing(false);
     }
   };
@@ -348,10 +436,19 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
+          {/* Loading indicator when remote image is being prepared */}
+          {loadingSource && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20 gap-2">
+              <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin" />
+              <span className="text-xs text-slate-300 font-semibold">Preparing Image for Crop...</span>
+            </div>
+          )}
+
           {/* Target Image to Crop */}
           <img
             ref={imgRef}
-            src={imageSrc}
+            src={safeImageSrc || imageSrc}
+            crossOrigin="anonymous"
             alt="Source to Crop"
             onLoad={() => setImageLoaded(true)}
             style={{
